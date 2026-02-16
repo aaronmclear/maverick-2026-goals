@@ -565,18 +565,14 @@ function computeSeries() {
 function renderChart() {
   if (!chartContainer) return;
   const series = computeSeries();
-  if (!series.length) {
-    chartContainer.innerHTML = '<div class="panel__note">Add games to see progress over time.</div>';
-    return;
-  }
   const [section, stat] = chartStat.value.split(':');
   const values = series.map(point => point[section][stat]).filter(v => v !== null && v !== undefined);
-  if (!values.length) {
-    chartContainer.innerHTML = '<div class="panel__note">Not enough data for this stat yet.</div>';
-    return;
-  }
-  const max = Math.max(...values);
-  const min = Math.min(...values);
+  const goal = state.data.goals[section][stat];
+  const baseline = state.data.baseline[section][stat];
+  const baselineGoalValues = [baseline, goal].filter(v => v !== null && v !== undefined);
+  const allValues = values.length ? values : baselineGoalValues;
+  const max = allValues.length ? Math.max(...allValues) : 1;
+  const min = allValues.length ? Math.min(...allValues) : 0;
   const range = max - min || 1;
   const width = 800;
   const height = 220;
@@ -591,10 +587,8 @@ function renderChart() {
   }).filter(Boolean);
 
   const line = points.map((point, idx) => `${idx === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
-  const goal = state.data.goals[section][stat];
-  const baseline = state.data.baseline[section][stat];
-  const firstLabel = series[0]?.label || '';
-  const lastLabel = series[series.length - 1]?.label || '';
+  const firstLabel = series[0]?.label || 'Start';
+  const lastLabel = series[series.length - 1]?.label || 'Now';
   const yMaxLabel = max.toFixed(3);
   const yMinLabel = min.toFixed(3);
 
