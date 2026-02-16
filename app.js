@@ -576,7 +576,7 @@ function renderChart() {
   const goal = state.data.goals[section][stat];
   const baseline = state.data.baseline[section][stat];
   const baselineGoalValues = [baseline, goal].filter(v => v !== null && v !== undefined);
-  const allValues = values.length ? values : baselineGoalValues;
+  const allValues = values.concat(baselineGoalValues);
   const max = allValues.length ? Math.max(...allValues) : 1;
   const min = allValues.length ? Math.min(...allValues) : 0;
   const range = max - min || 1;
