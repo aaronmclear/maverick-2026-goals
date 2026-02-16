@@ -251,7 +251,33 @@ function buildForms() {
 
 function buildGameForm() {
   gameForm.innerHTML = '';
-  gameFields.forEach(field => {
+  const battingKeys = new Set(['AB', 'H', '2B', '3B', 'HR', 'BB', 'HBP', 'SF', 'SO']);
+  const pitchingKeys = new Set(['IP', 'BF', 'H_allowed', 'ER', 'BB_allowed', 'SO_pitched']);
+
+  const makeHeader = label => {
+    const header = document.createElement('div');
+    header.className = 'form-section';
+    header.textContent = label;
+    return header;
+  };
+
+  const baseFields = gameFields.filter(field => !battingKeys.has(field.key) && !pitchingKeys.has(field.key));
+  const battingFields = gameFields.filter(field => battingKeys.has(field.key));
+  const pitchingFields = gameFields.filter(field => pitchingKeys.has(field.key));
+
+  const orderedFields = [
+    ...baseFields,
+    { key: '__batting__', label: 'Batting Stats', type: 'header' },
+    ...battingFields,
+    { key: '__pitching__', label: 'Pitching Stats', type: 'header' },
+    ...pitchingFields
+  ];
+
+  orderedFields.forEach(field => {
+    if (field.type === 'header') {
+      gameForm.appendChild(makeHeader(field.label));
+      return;
+    }
     const wrapper = document.createElement('label');
     wrapper.className = 'form-field';
     wrapper.textContent = field.label;

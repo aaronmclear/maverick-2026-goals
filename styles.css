@@ -159,6 +159,13 @@ tbody td {
   margin-top: 12px;
 }
 
+.form-section {
+  grid-column: 1 / -1;
+  font-weight: 700;
+  color: var(--ink);
+  padding-top: 8px;
+}
+
 .form-field {
   display: flex;
   flex-direction: column;
