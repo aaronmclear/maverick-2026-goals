@@ -86,7 +86,6 @@ function renderTables() {
 }
 
 function buildForm(section, formEl, source) {
-  formEl.innerHTML = '';
   statConfig[section].forEach(stat => {
     const wrapper = document.createElement('label');
     wrapper.className = 'form-field';
@@ -105,6 +104,8 @@ function buildForm(section, formEl, source) {
 }
 
 function buildForms() {
+  currentForm.innerHTML = '';
+  goalsForm.innerHTML = '';
   buildForm('batting', currentForm, state.data.current.batting);
   buildForm('pitching', currentForm, state.data.current.pitching);
   buildForm('batting', goalsForm, state.data.goals.batting);
@@ -253,6 +254,9 @@ downloadTemplateBtn.addEventListener('click', () => {
 (async function init() {
   state.data = await loadData();
   renderTables();
+  buildForms();
+  updateUpdatedAt();
+})();
   buildForms();
   updateUpdatedAt();
 })();
