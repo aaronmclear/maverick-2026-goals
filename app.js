@@ -293,7 +293,7 @@ function renderGames() {
 }
 
 function buildTeamFilter() {
-  const teams = new Set(['All']);
+  const teams = new Set(['All', 'Dodgers', '11U']);
   state.data.games.forEach(game => {
     if (game.team) teams.add(game.team);
   });
