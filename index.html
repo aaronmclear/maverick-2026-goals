@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Maverick 2026 Baseball Goals</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__content">
+        <p class="hero__kicker">Maverick Baseball</p>
+        <h1>Maverick 2026 Baseball Goals</h1>
+        <p class="hero__sub">Live dashboard with mobile updates and CSV upload.</p>
+        <div class="hero__meta" id="updatedAt">Updated: --</div>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Batting</h2>
+          <p class="panel__hint">Baseline vs 2026 total vs goal</p>
+        </div>
+        <div class="table-wrap">
+          <table id="battingTable">
+            <thead>
+              <tr>
+                <th>Stat</th>
+                <th>2025 Baseline</th>
+                <th>2026 Total</th>
+                <th>Goal</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Pitching</h2>
+          <p class="panel__hint">Baseline vs 2026 total vs goal</p>
+        </div>
+        <div class="table-wrap">
+          <table id="pitchingTable">
+            <thead>
+              <tr>
+                <th>Stat</th>
+                <th>2025 Baseline</th>
+                <th>2026 Total</th>
+                <th>Goal</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel panel--split">
+        <div>
+          <div class="panel__header">
+            <h2>Update 2026 Totals</h2>
+            <p class="panel__hint">Edit the live totals below.</p>
+          </div>
+          <form id="currentForm" class="form-grid"></form>
+          <div class="actions">
+            <button class="btn" type="submit" form="currentForm">Save 2026 Totals</button>
+            <span class="status" id="currentStatus"></span>
+          </div>
+        </div>
+        <div>
+          <div class="panel__header">
+            <h2>Update Goals</h2>
+            <p class="panel__hint">Adjust goals when needed.</p>
+          </div>
+          <form id="goalsForm" class="form-grid"></form>
+          <div class="actions">
+            <button class="btn" type="submit" form="goalsForm">Save Goals</button>
+            <span class="status" id="goalsStatus"></span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel__header">
+          <h2>CSV Upload</h2>
+          <p class="panel__hint">Upload a single-row CSV with stat headers.</p>
+        </div>
+        <div class="upload">
+          <input type="file" id="csvFile" accept=".csv" />
+          <button class="btn btn--ghost" id="downloadTemplate">Download CSV Template</button>
+          <button class="btn" id="uploadCsv">Apply CSV to 2026 Totals</button>
+          <span class="status" id="csvStatus"></span>
+        </div>
+        <p class="panel__note">Expected headers: AVG, OBP, SLG, OPS, K%, ERA, WHIP, K/BB, K/BF, BB/BF</p>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <p>Share this link with coaches. Updates save instantly.</p>
+    </footer>
+
+    <script src="app.js"></script>
+  </body>
+</html>
