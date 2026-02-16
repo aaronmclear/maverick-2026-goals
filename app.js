@@ -59,6 +59,9 @@ const gamesCsvStatus = document.getElementById('gamesCsvStatus');
 const uploadGamesCsv = document.getElementById('uploadGamesCsv');
 const gameForm = document.getElementById('gameForm');
 const teamFilter = document.getElementById('teamFilter');
+const chartView = document.getElementById('chartView');
+const chartStat = document.getElementById('chartStat');
+const chartContainer = document.getElementById('chart');
 
 function formatValue(value) {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -91,14 +94,6 @@ function inningsToOuts(ipValue) {
   if (frac === 0.1) return whole * 3 + 1;
   if (frac === 0.2) return whole * 3 + 2;
   return Math.round(num * 3);
-}
-
-function outsToInnings(outs) {
-  const whole = Math.floor(outs / 3);
-  const remainder = outs % 3;
-  if (remainder === 0) return whole;
-  if (remainder === 1) return Number(`${whole}.1`);
-  return Number(`${whole}.2`);
 }
 
 function calculateTotals(games) {
@@ -149,8 +144,8 @@ function calculateTotals(games) {
     totals.pitching.BB_allowed += Number(game.BB_allowed || 0);
     totals.pitching.SO_pitched += Number(game.SO_pitched || 0);
     totals.pitching.pitches += Number(game.pitches || 0) || (Number(game.balls || 0) + Number(game.strikes || 0));
-    totals.pitching.balls = (totals.pitching.balls || 0) + Number(game.balls || 0);
-    totals.pitching.strikes = (totals.pitching.strikes || 0) + Number(game.strikes || 0);
+    totals.pitching.balls += Number(game.balls || 0);
+    totals.pitching.strikes += Number(game.strikes || 0);
   });
 
   return totals;
@@ -446,6 +441,7 @@ teamFilter.addEventListener('change', () => {
   renderTables();
   renderGames();
   buildForms();
+  renderChart();
 });
 
 function parseCsv(text) {
@@ -489,14 +485,109 @@ uploadGamesCsv.addEventListener('click', async () => {
   });
   state.data.meta.updatedAt = new Date().toLocaleString();
   applyGameTotals();
-  buildTeamFilter();
   renderTables();
   renderGames();
   buildForms();
   updateUpdatedAt();
+  renderChart();
   await saveData(state.data, gamesCsvStatus);
 });
 
+function buildChartStatOptions() {
+  chartStat.innerHTML = '';
+  const options = [];
+  if (chartView.value === 'all') {
+    statConfig.batting.forEach(stat => options.push({ section: 'batting', key: stat.key, label: `Batting ${stat.label}` }));
+    statConfig.pitching.forEach(stat => options.push({ section: 'pitching', key: stat.key, label: `Pitching ${stat.label}` }));
+  } else if (chartView.value === 'batting') {
+    statConfig.batting.forEach(stat => options.push({ section: 'batting', key: stat.key, label: stat.label }));
+  } else {
+    statConfig.pitching.forEach(stat => options.push({ section: 'pitching', key: stat.key, label: stat.label }));
+  }
+
+  options.forEach(option => {
+    const el = document.createElement('option');
+    el.value = `${option.section}:${option.key}`;
+    el.textContent = option.label;
+    chartStat.appendChild(el);
+  });
+}
+
+function computeSeries() {
+  const games = getFilteredGames().slice();
+  if (!games.length) return [];
+
+  games.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+
+  const series = [];
+  let cumulative = [];
+  games.forEach(game => {
+    cumulative.push(game);
+    const totals = calculateTotals(cumulative);
+    const rates = calculateRates(totals);
+    series.push({
+      label: game.date || 'Game',
+      batting: rates.batting,
+      pitching: rates.pitching
+    });
+  });
+
+  return series;
+}
+
+function renderChart() {
+  if (!chartContainer) return;
+  const series = computeSeries();
+  if (!series.length) {
+    chartContainer.innerHTML = '<div class="panel__note">Add games to see progress over time.</div>';
+    return;
+  }
+  const [section, stat] = chartStat.value.split(':');
+  const values = series.map(point => point[section][stat]).filter(v => v !== null && v !== undefined);
+  if (!values.length) {
+    chartContainer.innerHTML = '<div class="panel__note">Not enough data for this stat yet.</div>';
+    return;
+  }
+  const max = Math.max(...values);
+  const min = Math.min(...values);
+  const range = max - min || 1;
+  const width = 800;
+  const height = 220;
+  const padding = 24;
+
+  const points = series.map((point, idx) => {
+    const value = point[section][stat];
+    if (value === null || value === undefined) return null;
+    const x = padding + (idx / Math.max(series.length - 1, 1)) * (width - padding * 2);
+    const y = height - padding - ((value - min) / range) * (height - padding * 2);
+    return { x, y, value };
+  }).filter(Boolean);
+
+  const line = points.map((point, idx) => `${idx === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
+  const goal = state.data.goals[section][stat];
+  const baseline = state.data.baseline[section][stat];
+
+  chartContainer.innerHTML = `
+    <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
+      <rect x="0" y="0" width="${width}" height="${height}" fill="#fff" />
+      <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#efe7ea" />
+      <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#efe7ea" />
+      ${baseline !== null && baseline !== undefined ? `<line x1="${padding}" y1="${height - padding - ((baseline - min) / range) * (height - padding * 2)}" x2="${width - padding}" y2="${height - padding - ((baseline - min) / range) * (height - padding * 2)}" stroke="#d49a00" stroke-dasharray="6 6" />` : ''}
+      ${goal !== null && goal !== undefined ? `<line x1="${padding}" y1="${height - padding - ((goal - min) / range) * (height - padding * 2)}" x2="${width - padding}" y2="${height - padding - ((goal - min) / range) * (height - padding * 2)}" stroke="#1b7f3f" stroke-dasharray="6 6" />` : ''}
+      <path d="${line}" fill="none" stroke="#7a0f2b" stroke-width="3" />
+      ${points.map(point => `<circle cx="${point.x}" cy="${point.y}" r="4" fill="#7a0f2b" />`).join('')}
+    </svg>
+  `;
+}
+
+chartView.addEventListener('change', () => {
+  buildChartStatOptions();
+  renderChart();
+});
+
+chartStat.addEventListener('change', () => {
+  renderChart();
+});
 
 (async function init() {
   state.data = await loadData();
@@ -508,4 +599,6 @@ uploadGamesCsv.addEventListener('click', async () => {
   buildGameForm();
   renderGames();
   updateUpdatedAt();
+  buildChartStatOptions();
+  renderChart();
 })();

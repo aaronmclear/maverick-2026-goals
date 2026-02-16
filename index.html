@@ -64,6 +64,28 @@
 
       <section class="panel">
         <div class="panel__header">
+          <h2>Progress Over Time</h2>
+          <p class="panel__hint">Track trends by section or stat.</p>
+        </div>
+        <div class="chart-controls">
+          <label class="form-field">
+            View
+            <select id="chartView">
+              <option value="all">All</option>
+              <option value="batting">Batting</option>
+              <option value="pitching">Pitching</option>
+            </select>
+          </label>
+          <label class="form-field">
+            Stat
+            <select id="chartStat"></select>
+          </label>
+        </div>
+        <div class="chart" id="chart"></div>
+      </section>
+
+      <section class="panel">
+        <div class="panel__header">
           <h2>Game Log</h2>
           <p class="panel__hint">Add each game and auto-update totals.</p>
         </div>

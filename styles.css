@@ -90,11 +90,6 @@ body {
   box-shadow: 0 10px 30px var(--shadow);
 }
 
-.panel--split {
-  display: grid;
-  gap: 20px;
-}
-
 .panel__header {
   display: flex;
   align-items: baseline;
@@ -226,8 +221,26 @@ select {
   margin-top: 12px;
 }
 
-.game-controls {
+.game-controls,
+.chart-controls {
   margin-top: 12px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chart {
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid #efe7ea;
+  border-radius: 14px;
+  padding: 16px;
+  min-height: 220px;
+}
+
+.chart svg {
+  width: 100%;
+  height: 220px;
 }
 
 .footer {
@@ -241,5 +254,15 @@ select {
   .panel__header {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .hero__content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hero__logo {
+    width: 96px;
+    height: 96px;
   }
 }
