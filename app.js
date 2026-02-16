@@ -232,7 +232,7 @@ function buildForm(section, formEl, source) {
     input.step = '0.001';
     input.name = `${section}.${stat.key}`;
     const value = source[stat.key];
-    input.value = value === null || value === undefined ? '' : value;
+    input.value = value === null || value === undefined ? '' : Number(value).toFixed(3);
     input.addEventListener('blur', () => {
       if (input.value === '') return;
       const num = Number(input.value);
