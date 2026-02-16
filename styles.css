@@ -36,6 +36,10 @@ body {
 .hero__content {
   max-width: 980px;
   margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
 }
 
 .hero__kicker {
@@ -60,6 +64,15 @@ body {
 .hero__meta {
   font-size: 14px;
   color: #f7e5ea;
+}
+
+.hero__logo {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 8px;
 }
 
 .container {
