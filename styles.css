@@ -99,6 +99,7 @@ body {
 
 .table-wrap {
   overflow-x: auto;
+  margin-top: 12px;
 }
 
 table {
@@ -149,7 +150,10 @@ tbody td {
   color: var(--muted);
 }
 
-input[type="number"] {
+input[type="number"],
+input[type="text"],
+input[type="date"],
+select {
   padding: 8px 10px;
   border-radius: 10px;
   border: 1px solid #d5cfc4;
@@ -195,6 +199,10 @@ input[type="number"] {
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+  margin-top: 12px;
+}
+
+.game-controls {
   margin-top: 12px;
 }
 
