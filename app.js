@@ -233,6 +233,13 @@ function buildForm(section, formEl, source) {
     input.name = `${section}.${stat.key}`;
     const value = source[stat.key];
     input.value = value === null || value === undefined ? '' : value;
+    input.addEventListener('blur', () => {
+      if (input.value === '') return;
+      const num = Number(input.value);
+      if (!Number.isNaN(num)) {
+        input.value = num.toFixed(3);
+      }
+    });
 
     wrapper.appendChild(input);
     formEl.appendChild(wrapper);
@@ -264,6 +271,15 @@ function buildGameForm() {
     }
     if (field.key === 'IP') {
       input.placeholder = 'e.g. 2.1';
+    }
+    if (field.type === 'number' || field.key === 'IP') {
+      input.addEventListener('blur', () => {
+        if (input.value === '') return;
+        const num = Number(input.value);
+        if (!Number.isNaN(num)) {
+          input.value = num.toFixed(3);
+        }
+      });
     }
 
     wrapper.appendChild(input);
