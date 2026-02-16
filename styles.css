@@ -221,6 +221,18 @@ select {
   margin-top: 12px;
 }
 
+.hidden {
+  display: none;
+}
+
+.lock {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
 .game-controls,
 .chart-controls {
   margin-top: 12px;

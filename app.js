@@ -52,6 +52,11 @@ const pitchingTableBody = document.querySelector('#pitchingTable tbody');
 const goalsForm = document.getElementById('goalsForm');
 const updatedAtEl = document.getElementById('updatedAt');
 const goalsStatus = document.getElementById('goalsStatus');
+const goalsContent = document.getElementById('goalsContent');
+const goalsLock = document.getElementById('goalsLock');
+const unlockGoals = document.getElementById('unlockGoals');
+const goalsPassword = document.getElementById('goalsPassword');
+const goalsLockStatus = document.getElementById('goalsLockStatus');
 const gameStatus = document.getElementById('gameStatus');
 const gamesTableBody = document.querySelector('#gamesTable tbody');
 const gamesCsv = document.getElementById('gamesCsv');
@@ -62,6 +67,8 @@ const teamFilter = document.getElementById('teamFilter');
 const chartView = document.getElementById('chartView');
 const chartStat = document.getElementById('chartStat');
 const chartContainer = document.getElementById('chart');
+
+const GOALS_PASSWORD = 'maverickbaseball';
 
 function formatValue(value) {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -378,6 +385,16 @@ function updateUpdatedAt() {
   updatedAtEl.textContent = `Updated: ${stamp}`;
 }
 
+function setGoalsUnlocked(unlocked) {
+  if (unlocked) {
+    goalsContent.classList.remove('hidden');
+    goalsLock.classList.add('hidden');
+  } else {
+    goalsContent.classList.add('hidden');
+    goalsLock.classList.remove('hidden');
+  }
+}
+
 goalsForm.addEventListener('submit', async event => {
   event.preventDefault();
   const formData = new FormData(goalsForm);
@@ -390,6 +407,16 @@ goalsForm.addEventListener('submit', async event => {
   renderTables();
   updateUpdatedAt();
   await saveData(state.data, goalsStatus);
+});
+
+unlockGoals.addEventListener('click', () => {
+  if (goalsPassword.value === GOALS_PASSWORD) {
+    localStorage.setItem('goalsUnlocked', 'true');
+    goalsLockStatus.textContent = 'Unlocked';
+    setGoalsUnlocked(true);
+  } else {
+    goalsLockStatus.textContent = 'Wrong password';
+  }
 });
 
 gameForm.addEventListener('submit', async event => {
@@ -616,4 +643,6 @@ chartStat.addEventListener('change', () => {
   updateUpdatedAt();
   buildChartStatOptions();
   renderChart();
+  const unlocked = localStorage.getItem('goalsUnlocked') === 'true';
+  setGoalsUnlocked(unlocked);
 })();

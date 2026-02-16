@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Maverick 2026 Baseball Goals</title>
     <link rel="stylesheet" href="styles.css" />
+    <link rel="icon" href="favicon.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
   </head>
   <body>
     <header class="hero">
@@ -121,10 +123,17 @@
           <h2>Update Goals</h2>
           <p class="panel__hint">Adjust goals when needed.</p>
         </div>
-        <form id="goalsForm" class="form-grid"></form>
-        <div class="actions">
-          <button class="btn" type="submit" form="goalsForm">Save Goals</button>
-          <span class="status" id="goalsStatus"></span>
+        <div class="lock" id="goalsLock">
+          <input type="password" id="goalsPassword" placeholder="Password" />
+          <button class="btn btn--ghost" id="unlockGoals">Unlock Goals</button>
+          <span class="status" id="goalsLockStatus"></span>
+        </div>
+        <div id="goalsContent" class="hidden">
+          <form id="goalsForm" class="form-grid"></form>
+          <div class="actions">
+            <button class="btn" type="submit" form="goalsForm">Save Goals</button>
+            <span class="status" id="goalsStatus"></span>
+          </div>
         </div>
       </section>
     </main>
