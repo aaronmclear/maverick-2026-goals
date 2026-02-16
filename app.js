@@ -43,10 +43,8 @@ const state = {
 
 const battingTableBody = document.querySelector('#battingTable tbody');
 const pitchingTableBody = document.querySelector('#pitchingTable tbody');
-const currentForm = document.getElementById('currentForm');
 const goalsForm = document.getElementById('goalsForm');
 const updatedAtEl = document.getElementById('updatedAt');
-const currentStatus = document.getElementById('currentStatus');
 const goalsStatus = document.getElementById('goalsStatus');
 const gameStatus = document.getElementById('gameStatus');
 const gamesTableBody = document.querySelector('#gamesTable tbody');
@@ -247,10 +245,7 @@ function buildForm(section, formEl, source) {
 }
 
 function buildForms() {
-  currentForm.innerHTML = '';
   goalsForm.innerHTML = '';
-  buildForm('batting', currentForm, state.data.current.batting);
-  buildForm('pitching', currentForm, state.data.current.pitching);
   buildForm('batting', goalsForm, state.data.goals.batting);
   buildForm('pitching', goalsForm, state.data.goals.pitching);
 }
@@ -350,20 +345,6 @@ function updateUpdatedAt() {
   const stamp = state.data.meta.updatedAt || 'Just now';
   updatedAtEl.textContent = `Updated: ${stamp}`;
 }
-
-currentForm.addEventListener('submit', async event => {
-  event.preventDefault();
-  const formData = new FormData(currentForm);
-  formData.forEach((value, key) => {
-    const [section, stat] = key.split('.');
-    const num = value === '' ? null : Number(value);
-    state.data.current[section][stat] = Number.isNaN(num) ? null : num;
-  });
-  state.data.meta.updatedAt = new Date().toLocaleString();
-  renderTables();
-  updateUpdatedAt();
-  await saveData(state.data, currentStatus);
-});
 
 goalsForm.addEventListener('submit', async event => {
   event.preventDefault();
