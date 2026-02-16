@@ -62,9 +62,6 @@ function formatValue(value) {
     return 'n/a';
   }
   const num = Number(value);
-  if (Math.abs(num) >= 1) {
-    return num.toFixed(3).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
-  }
   return num.toFixed(3);
 }
 
@@ -284,8 +281,8 @@ function renderGames() {
       <td>${game.date || ''}</td>
       <td>${game.opponent || ''}</td>
       <td>${game.team || ''}</td>
-      <td>${game.AB || 0}/${game.H || 0}/${game['2B'] || 0}/${game['3B'] || 0}/${game.HR || 0}/${game.BB || 0}/${game.HBP || 0}/${game.SF || 0}/${game.SO || 0}</td>
-      <td>${game.IP || 0}/${game.BF || 0}/${game.H_allowed || 0}/${game.ER || 0}/${game.BB_allowed || 0}/${game.SO_pitched || 0}</td>
+      <td>${formatValue(game.AB || 0)}/${formatValue(game.H || 0)}/${formatValue(game['2B'] || 0)}/${formatValue(game['3B'] || 0)}/${formatValue(game.HR || 0)}/${formatValue(game.BB || 0)}/${formatValue(game.HBP || 0)}/${formatValue(game.SF || 0)}/${formatValue(game.SO || 0)}</td>
+      <td>${formatValue(game.IP || 0)}/${formatValue(game.BF || 0)}/${formatValue(game.H_allowed || 0)}/${formatValue(game.ER || 0)}/${formatValue(game.BB_allowed || 0)}/${formatValue(game.SO_pitched || 0)}</td>
       <td><button class="btn btn--ghost" data-index="${index}">Remove</button></td>
     `;
     gamesTableBody.appendChild(row);
