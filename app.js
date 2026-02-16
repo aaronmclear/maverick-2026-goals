@@ -18,7 +18,7 @@ const statConfig = {
 const gameFields = [
   { key: 'date', label: 'Game Date', type: 'date' },
   { key: 'opponent', label: 'Opponent', type: 'text' },
-  { key: 'team', label: 'Team', type: 'text' },
+  { key: 'team', label: 'Team', type: 'select', options: ['11U', 'Dodgers'] },
   { key: 'AB', label: 'AB', type: 'number' },
   { key: 'H', label: 'H', type: 'number' },
   { key: '2B', label: '2B', type: 'number' },
@@ -51,7 +51,6 @@ const gamesTableBody = document.querySelector('#gamesTable tbody');
 const gamesCsv = document.getElementById('gamesCsv');
 const gamesCsvStatus = document.getElementById('gamesCsvStatus');
 const uploadGamesCsv = document.getElementById('uploadGamesCsv');
-const downloadGamesTemplate = document.getElementById('downloadGamesTemplate');
 const gameForm = document.getElementById('gameForm');
 const teamFilter = document.getElementById('teamFilter');
 
@@ -177,7 +176,7 @@ function getFilteredGames() {
   if (state.teamFilter === 'All') {
     return state.data.games;
   }
-  return state.data.games.filter(game => (game.team || '').toLowerCase() === state.teamFilter.toLowerCase());
+  return state.data.games.filter(game => (game.team || '') === state.teamFilter);
 }
 
 function applyGameTotals() {
@@ -257,24 +256,36 @@ function buildGameForm() {
     wrapper.className = 'form-field';
     wrapper.textContent = field.label;
 
-    const input = document.createElement('input');
-    input.type = field.type;
-    input.name = field.key;
-    if (field.type === 'number') {
-      input.step = '1';
-      input.min = '0';
-    }
-    if (field.key === 'IP') {
-      input.placeholder = 'e.g. 2.1';
-    }
-    if (field.type === 'number' || field.key === 'IP') {
-      input.addEventListener('blur', () => {
-        if (input.value === '') return;
-        const num = Number(input.value);
-        if (!Number.isNaN(num)) {
-          input.value = num.toFixed(3);
-        }
+    let input;
+    if (field.type === 'select') {
+      input = document.createElement('select');
+      input.name = field.key;
+      field.options.forEach(optionValue => {
+        const option = document.createElement('option');
+        option.value = optionValue;
+        option.textContent = optionValue;
+        input.appendChild(option);
       });
+    } else {
+      input = document.createElement('input');
+      input.type = field.type;
+      input.name = field.key;
+      if (field.type === 'number') {
+        input.step = '1';
+        input.min = '0';
+      }
+      if (field.key === 'IP') {
+        input.placeholder = 'e.g. 2.1';
+      }
+      if (field.type === 'number' || field.key === 'IP') {
+        input.addEventListener('blur', () => {
+          if (input.value === '') return;
+          const num = Number(input.value);
+          if (!Number.isNaN(num)) {
+            input.value = num.toFixed(3);
+          }
+        });
+      }
     }
 
     wrapper.appendChild(input);
@@ -289,30 +300,13 @@ function renderGames() {
   games.forEach((game, index) => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td>${game.date || ''}</td>
-      <td>${game.opponent || ''}</td>
-      <td>${game.team || ''}</td>
-      <td>${formatValue(game.AB || 0)}/${formatValue(game.H || 0)}/${formatValue(game['2B'] || 0)}/${formatValue(game['3B'] || 0)}/${formatValue(game.HR || 0)}/${formatValue(game.BB || 0)}/${formatValue(game.HBP || 0)}/${formatValue(game.SF || 0)}/${formatValue(game.SO || 0)}</td>
-      <td>${formatValue(game.IP || 0)}/${formatValue(game.BF || 0)}/${formatValue(game.H_allowed || 0)}/${formatValue(game.ER || 0)}/${formatValue(game.BB_allowed || 0)}/${formatValue(game.SO_pitched || 0)}</td>
+      <td><strong>${game.date || ''}</strong><br>${game.opponent || ''}<br>${game.team || ''}</td>
+      <td><strong>Batting</strong><br>AB ${formatValue(game.AB || 0)} · H ${formatValue(game.H || 0)} · 2B ${formatValue(game['2B'] || 0)} · 3B ${formatValue(game['3B'] || 0)} · HR ${formatValue(game.HR || 0)} · BB ${formatValue(game.BB || 0)} · HBP ${formatValue(game.HBP || 0)} · SF ${formatValue(game.SF || 0)} · SO ${formatValue(game.SO || 0)}</td>
+      <td><strong>Pitching</strong><br>IP ${formatValue(game.IP || 0)} · BF ${formatValue(game.BF || 0)} · H ${formatValue(game.H_allowed || 0)} · ER ${formatValue(game.ER || 0)} · BB ${formatValue(game.BB_allowed || 0)} · SO ${formatValue(game.SO_pitched || 0)}</td>
       <td><button class="btn btn--ghost" data-index="${index}">Remove</button></td>
     `;
     gamesTableBody.appendChild(row);
   });
-}
-
-function buildTeamFilter() {
-  const teams = new Set(['All', 'Dodgers', '11U']);
-  state.data.games.forEach(game => {
-    if (game.team) teams.add(game.team);
-  });
-  teamFilter.innerHTML = '';
-  Array.from(teams).forEach(team => {
-    const option = document.createElement('option');
-    option.value = team;
-    option.textContent = team;
-    teamFilter.appendChild(option);
-  });
-  teamFilter.value = state.teamFilter;
 }
 
 async function loadData() {
@@ -376,7 +370,6 @@ gameForm.addEventListener('submit', async event => {
   state.data.games.push(game);
   state.data.meta.updatedAt = new Date().toLocaleString();
   applyGameTotals();
-  buildTeamFilter();
   renderTables();
   renderGames();
   buildForms();
@@ -397,7 +390,6 @@ gamesTableBody.addEventListener('click', async event => {
   }
   state.data.meta.updatedAt = new Date().toLocaleString();
   applyGameTotals();
-  buildTeamFilter();
   renderTables();
   renderGames();
   buildForms();
@@ -462,24 +454,11 @@ uploadGamesCsv.addEventListener('click', async () => {
   await saveData(state.data, gamesCsvStatus);
 });
 
-downloadGamesTemplate.addEventListener('click', () => {
-  const headers = gameFields.map(field => field.key);
-  const csv = `${headers.join(',')}\n`;
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = 'maverick_game_log_template.csv';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-});
 
 (async function init() {
   state.data = await loadData();
   if (!state.data.games) state.data.games = [];
-  buildTeamFilter();
+  teamFilter.value = state.teamFilter;
   applyGameTotals();
   renderTables();
   buildForms();

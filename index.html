@@ -67,7 +67,11 @@
         <div class="game-controls">
           <label class="form-field">
             Team Filter
-            <select id="teamFilter"></select>
+            <select id="teamFilter">
+              <option>All</option>
+              <option>11U</option>
+              <option>Dodgers</option>
+            </select>
           </label>
         </div>
         <form id="gameForm" class="form-grid"></form>
@@ -77,22 +81,11 @@
         </div>
         <div class="table-wrap">
           <table id="gamesTable">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Opponent</th>
-                <th>Team</th>
-                <th>Batting (AB/H/2B/3B/HR/BB/HBP/SF/SO)</th>
-                <th>Pitching (IP/BF/H/ER/BB/SO)</th>
-                <th>Remove</th>
-              </tr>
-            </thead>
             <tbody></tbody>
           </table>
         </div>
         <div class="upload">
           <input type="file" id="gamesCsv" accept=".csv" />
-          <button class="btn btn--ghost" id="downloadGamesTemplate">Download Game CSV Template</button>
           <button class="btn" id="uploadGamesCsv">Upload Games CSV</button>
           <span class="status" id="gamesCsvStatus"></span>
         </div>
