@@ -257,6 +257,3 @@ downloadTemplateBtn.addEventListener('click', () => {
   buildForms();
   updateUpdatedAt();
 })();
-  buildForms();
-  updateUpdatedAt();
-})();
