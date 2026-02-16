@@ -1,43 +1,134 @@
-Maverick Baseball
-Maverick 2026 Baseball Goals
-Live dashboard with mobile updates, game log, and CSV upload.
-Updated: --
-Batting
-Baseline vs 2026 total vs goal
-Stat
-2025 Baseline
-2026 Total
-Goal
-Status
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Maverick 2026 Baseball Goals</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__content">
+        <p class="hero__kicker">Maverick Baseball</p>
+        <h1>Maverick 2026 Baseball Goals</h1>
+        <p class="hero__sub">Live dashboard with mobile updates, game log, and CSV upload.</p>
+        <div class="hero__meta" id="updatedAt">Updated: --</div>
+      </div>
+    </header>
 
-Pitching
-Baseline vs 2026 total vs goal
-Stat
-2025 Baseline
-2026 Total
-Goal
-Status
+    <main class="container">
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Batting</h2>
+          <p class="panel__hint">Baseline vs 2026 total vs goal</p>
+        </div>
+        <div class="table-wrap">
+          <table id="battingTable">
+            <thead>
+              <tr>
+                <th>Stat</th>
+                <th>2025 Baseline</th>
+                <th>2026 Total</th>
+                <th>Goal</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
 
-Update 2026 Totals
-Edit the live totals below.
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Pitching</h2>
+          <p class="panel__hint">Baseline vs 2026 total vs goal</p>
+        </div>
+        <div class="table-wrap">
+          <table id="pitchingTable">
+            <thead>
+              <tr>
+                <th>Stat</th>
+                <th>2025 Baseline</th>
+                <th>2026 Total</th>
+                <th>Goal</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </section>
 
-Save 2026 Totals
-Update Goals
-Adjust goals when needed.
+      <section class="panel panel--split">
+        <div>
+          <div class="panel__header">
+            <h2>Update 2026 Totals</h2>
+            <p class="panel__hint">Edit the live totals below.</p>
+          </div>
+          <form id="currentForm" class="form-grid"></form>
+          <div class="actions">
+            <button class="btn" type="submit" form="currentForm">Save 2026 Totals</button>
+            <span class="status" id="currentStatus"></span>
+          </div>
+        </div>
+        <div>
+          <div class="panel__header">
+            <h2>Update Goals</h2>
+            <p class="panel__hint">Adjust goals when needed.</p>
+          </div>
+          <form id="goalsForm" class="form-grid"></form>
+          <div class="actions">
+            <button class="btn" type="submit" form="goalsForm">Save Goals</button>
+            <span class="status" id="goalsStatus"></span>
+          </div>
+        </div>
+      </section>
 
-Save Goals
-Game Log
-Add each game and auto-update totals.
-Team Filter
+      <section class="panel">
+        <div class="panel__header">
+          <h2>Game Log</h2>
+          <p class="panel__hint">Add each game and auto-update totals.</p>
+        </div>
+        <div class="game-controls">
+          <label class="form-field">
+            Team Filter
+            <select id="teamFilter"></select>
+          </label>
+        </div>
+        <form id="gameForm" class="form-grid"></form>
+        <div class="actions">
+          <button class="btn" type="submit" form="gameForm">Add Game</button>
+          <span class="status" id="gameStatus"></span>
+        </div>
+        <div class="table-wrap">
+          <table id="gamesTable">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Opponent</th>
+                <th>Team</th>
+                <th>Batting (AB/H/2B/3B/HR/BB/HBP/SF/SO)</th>
+                <th>Pitching (IP/BF/H/ER/BB/SO)</th>
+                <th>Remove</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="upload">
+          <input type="file" id="gamesCsv" accept=".csv" />
+          <button class="btn btn--ghost" id="downloadGamesTemplate">Download Game CSV Template</button>
+          <button class="btn" id="uploadGamesCsv">Upload Games CSV</button>
+          <span class="status" id="gamesCsvStatus"></span>
+        </div>
+        <p class="panel__note">Game CSV headers: date,opponent,team,AB,H,2B,3B,HR,BB,HBP,SF,SO,IP,BF,H_allowed,ER,BB_allowed,SO_pitched</p>
+      </section>
+    </main>
 
-Add Game
-Date
-Opponent
-Team
-Batting (AB/H/2B/3B/HR/BB/HBP/SF/SO)
-Pitching (IP/BF/H/ER/BB/SO)
-Remove
+    <footer class="footer">
+      <p>Share this link with coaches. Updates save instantly.</p>
+    </footer>
 
-Download Game CSV Template Upload Games CSV
-Game CSV headers: date,opponent,team,AB,H,2B,3B,HR,BB,HBP,SF,SO,IP,BF,H_allowed,ER,BB_allowed,SO_pitched
-Share this link with coaches. Updates save instantly.
+    <script src="app.js"></script>
+  </body>
+</html>
