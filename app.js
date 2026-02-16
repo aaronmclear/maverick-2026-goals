@@ -566,16 +566,31 @@ function renderChart() {
   const line = points.map((point, idx) => `${idx === 0 ? 'M' : 'L'} ${point.x} ${point.y}`).join(' ');
   const goal = state.data.goals[section][stat];
   const baseline = state.data.baseline[section][stat];
+  const firstLabel = series[0]?.label || '';
+  const lastLabel = series[series.length - 1]?.label || '';
+  const yMaxLabel = max.toFixed(3);
+  const yMinLabel = min.toFixed(3);
 
   chartContainer.innerHTML = `
     <svg viewBox="0 0 ${width} ${height}" preserveAspectRatio="none">
       <rect x="0" y="0" width="${width}" height="${height}" fill="#fff" />
       <line x1="${padding}" y1="${padding}" x2="${padding}" y2="${height - padding}" stroke="#efe7ea" />
       <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#efe7ea" />
+      <text x="${padding}" y="${padding - 6}" font-size="10" fill="#5d5d5d">${yMaxLabel}</text>
+      <text x="${padding}" y="${height - 6}" font-size="10" fill="#5d5d5d">${yMinLabel}</text>
+      <text x="${padding}" y="${height - 4}" font-size="10" fill="#5d5d5d" text-anchor="start">${firstLabel}</text>
+      <text x="${width - padding}" y="${height - 4}" font-size="10" fill="#5d5d5d" text-anchor="end">${lastLabel}</text>
       ${baseline !== null && baseline !== undefined ? `<line x1="${padding}" y1="${height - padding - ((baseline - min) / range) * (height - padding * 2)}" x2="${width - padding}" y2="${height - padding - ((baseline - min) / range) * (height - padding * 2)}" stroke="#d49a00" stroke-dasharray="6 6" />` : ''}
       ${goal !== null && goal !== undefined ? `<line x1="${padding}" y1="${height - padding - ((goal - min) / range) * (height - padding * 2)}" x2="${width - padding}" y2="${height - padding - ((goal - min) / range) * (height - padding * 2)}" stroke="#1b7f3f" stroke-dasharray="6 6" />` : ''}
       <path d="${line}" fill="none" stroke="#7a0f2b" stroke-width="3" />
       ${points.map(point => `<circle cx="${point.x}" cy="${point.y}" r="4" fill="#7a0f2b" />`).join('')}
+      <rect x="${width - padding - 160}" y="${padding - 6}" width="160" height="36" fill="rgba(255,255,255,0.9)" stroke="#efe7ea" />
+      <line x1="${width - padding - 150}" y1="${padding + 6}" x2="${width - padding - 130}" y2="${padding + 6}" stroke="#7a0f2b" stroke-width="3" />
+      <text x="${width - padding - 120}" y="${padding + 9}" font-size="10" fill="#5d5d5d">Current</text>
+      <line x1="${width - padding - 150}" y1="${padding + 20}" x2="${width - padding - 130}" y2="${padding + 20}" stroke="#d49a00" stroke-dasharray="6 6" />
+      <text x="${width - padding - 120}" y="${padding + 23}" font-size="10" fill="#5d5d5d">Baseline</text>
+      <line x1="${width - padding - 150}" y1="${padding + 32}" x2="${width - padding - 130}" y2="${padding + 32}" stroke="#1b7f3f" stroke-dasharray="6 6" />
+      <text x="${width - padding - 120}" y="${padding + 35}" font-size="10" fill="#5d5d5d">Goal</text>
     </svg>
   `;
 }
