@@ -4,11 +4,10 @@ This is a lightweight, mobile-friendly dashboard for viewing and updating 2026 s
 
 ## Deploy (Vercel)
 1. Create a Vercel project from this folder.
-2. In Vercel, add a **KV** store (Storage tab).
-3. Add these environment variables to the project:
-   - `KV_REST_API_URL`
-   - `KV_REST_API_TOKEN`
-4. Deploy. The app will seed the KV store from `data.json` on first run.
+2. In Vercel, add a **Blob** store (Marketplace).
+3. Add this environment variable to the project:
+   - `BLOB_READ_WRITE_TOKEN`
+4. Deploy. The app will seed Blob storage from `data.json` on first run.
 
 ## Usage
 - Open the site on your phone or desktop.
