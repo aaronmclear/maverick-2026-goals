@@ -11,7 +11,8 @@ const statConfig = {
     { key: 'WHIP', label: 'WHIP', higherIsBetter: false },
     { key: 'K/BB', label: 'K/BB', higherIsBetter: true },
     { key: 'K/BF', label: 'K/BF', higherIsBetter: true },
-    { key: 'BB/BF', label: 'BB/BF', higherIsBetter: false }
+    { key: 'BB/BF', label: 'BB/BF', higherIsBetter: false },
+    { key: 'Strike%', label: 'Strike%', higherIsBetter: true }
   ]
 };
 
@@ -33,7 +34,9 @@ const gameFields = [
   { key: 'H_allowed', label: 'H Allowed', type: 'number' },
   { key: 'ER', label: 'ER', type: 'number' },
   { key: 'BB_allowed', label: 'BB Allowed', type: 'number' },
-  { key: 'SO_pitched', label: 'SO Pitched', type: 'number' }
+  { key: 'SO_pitched', label: 'SO Pitched', type: 'number' },
+  { key: 'balls', label: 'Balls Thrown', type: 'number' },
+  { key: 'strikes', label: 'Strikes Thrown', type: 'number' }
 ];
 
 const state = {
@@ -114,7 +117,9 @@ function calculateTotals(games) {
       H_allowed: 0,
       ER: 0,
       BB_allowed: 0,
-      SO_pitched: 0
+      SO_pitched: 0,
+      balls: 0,
+      strikes: 0
     }
   };
 
@@ -135,6 +140,8 @@ function calculateTotals(games) {
     totals.pitching.ER += Number(game.ER || 0);
     totals.pitching.BB_allowed += Number(game.BB_allowed || 0);
     totals.pitching.SO_pitched += Number(game.SO_pitched || 0);
+    totals.pitching.balls = (totals.pitching.balls || 0) + Number(game.balls || 0);
+    totals.pitching.strikes = (totals.pitching.strikes || 0) + Number(game.strikes || 0);
   });
 
   return totals;
@@ -161,7 +168,8 @@ function calculateRates(totals) {
       WHIP: innings ? (pitching.H_allowed + pitching.BB_allowed) / innings : null,
       'K/BB': pitching.BB_allowed ? pitching.SO_pitched / pitching.BB_allowed : null,
       'K/BF': pitching.BF ? pitching.SO_pitched / pitching.BF : null,
-      'BB/BF': pitching.BF ? pitching.BB_allowed / pitching.BF : null
+      'BB/BF': pitching.BF ? pitching.BB_allowed / pitching.BF : null,
+      'Strike%': (pitching.balls + pitching.strikes) ? pitching.strikes / (pitching.balls + pitching.strikes) : null
     }
   };
 
@@ -252,7 +260,7 @@ function buildForms() {
 function buildGameForm() {
   gameForm.innerHTML = '';
   const battingKeys = new Set(['AB', 'H', '2B', '3B', 'HR', 'BB', 'HBP', 'SF', 'SO']);
-  const pitchingKeys = new Set(['IP', 'BF', 'H_allowed', 'ER', 'BB_allowed', 'SO_pitched']);
+  const pitchingKeys = new Set(['IP', 'BF', 'H_allowed', 'ER', 'BB_allowed', 'SO_pitched', 'balls', 'strikes']);
 
   const makeHeader = label => {
     const header = document.createElement('div');
@@ -328,7 +336,7 @@ function renderGames() {
     row.innerHTML = `
       <td><strong>${game.date || ''}</strong><br>${game.opponent || ''}<br>${game.team || ''}</td>
       <td><strong>Batting</strong><br>AB ${formatValue(game.AB || 0)} · H ${formatValue(game.H || 0)} · 2B ${formatValue(game['2B'] || 0)} · 3B ${formatValue(game['3B'] || 0)} · HR ${formatValue(game.HR || 0)} · BB ${formatValue(game.BB || 0)} · HBP ${formatValue(game.HBP || 0)} · SF ${formatValue(game.SF || 0)} · SO ${formatValue(game.SO || 0)}</td>
-      <td><strong>Pitching</strong><br>IP ${formatValue(game.IP || 0)} · BF ${formatValue(game.BF || 0)} · H ${formatValue(game.H_allowed || 0)} · ER ${formatValue(game.ER || 0)} · BB ${formatValue(game.BB_allowed || 0)} · SO ${formatValue(game.SO_pitched || 0)}</td>
+      <td><strong>Pitching</strong><br>IP ${formatValue(game.IP || 0)} · BF ${formatValue(game.BF || 0)} · H ${formatValue(game.H_allowed || 0)} · ER ${formatValue(game.ER || 0)} · BB ${formatValue(game.BB_allowed || 0)} · SO ${formatValue(game.SO_pitched || 0)} · B ${formatValue(game.balls || 0)} · S ${formatValue(game.strikes || 0)}</td>
       <td><button class="btn btn--ghost" data-index="${index}">Remove</button></td>
     `;
     gamesTableBody.appendChild(row);
