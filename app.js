@@ -542,7 +542,13 @@ function buildChartStatOptions() {
 
 function computeSeries() {
   const games = getFilteredGames().slice();
-  if (!games.length) return [];
+  if (!games.length) {
+    return [{
+      label: 'Current',
+      batting: state.data.current.batting,
+      pitching: state.data.current.pitching
+    }];
+  }
 
   games.sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 
