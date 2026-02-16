@@ -25,6 +25,7 @@ const gameFields = [
   { key: '2B', label: '2B', type: 'number' },
   { key: '3B', label: '3B', type: 'number' },
   { key: 'HR', label: 'HR', type: 'number' },
+  { key: 'R', label: 'Runs', type: 'number' },
   { key: 'BB', label: 'BB', type: 'number' },
   { key: 'HBP', label: 'HBP', type: 'number' },
   { key: 'SF', label: 'SF', type: 'number' },
@@ -33,8 +34,10 @@ const gameFields = [
   { key: 'BF', label: 'BF', type: 'number' },
   { key: 'H_allowed', label: 'H Allowed', type: 'number' },
   { key: 'ER', label: 'ER', type: 'number' },
+  { key: 'HBP_allowed', label: 'HBP Allowed', type: 'number' },
   { key: 'BB_allowed', label: 'BB Allowed', type: 'number' },
   { key: 'SO_pitched', label: 'SO Pitched', type: 'number' },
+  { key: 'pitches', label: 'Total Pitches', type: 'number' },
   { key: 'balls', label: 'Balls Thrown', type: 'number' },
   { key: 'strikes', label: 'Strikes Thrown', type: 'number' }
 ];
@@ -106,6 +109,7 @@ function calculateTotals(games) {
       '2B': 0,
       '3B': 0,
       HR: 0,
+      R: 0,
       BB: 0,
       HBP: 0,
       SF: 0,
@@ -116,8 +120,10 @@ function calculateTotals(games) {
       BF: 0,
       H_allowed: 0,
       ER: 0,
+      HBP_allowed: 0,
       BB_allowed: 0,
       SO_pitched: 0,
+      pitches: 0,
       balls: 0,
       strikes: 0
     }
@@ -129,6 +135,7 @@ function calculateTotals(games) {
     totals.batting['2B'] += Number(game['2B'] || 0);
     totals.batting['3B'] += Number(game['3B'] || 0);
     totals.batting.HR += Number(game.HR || 0);
+    totals.batting.R += Number(game.R || 0);
     totals.batting.BB += Number(game.BB || 0);
     totals.batting.HBP += Number(game.HBP || 0);
     totals.batting.SF += Number(game.SF || 0);
@@ -138,8 +145,10 @@ function calculateTotals(games) {
     totals.pitching.BF += Number(game.BF || 0);
     totals.pitching.H_allowed += Number(game.H_allowed || 0);
     totals.pitching.ER += Number(game.ER || 0);
+    totals.pitching.HBP_allowed += Number(game.HBP_allowed || 0);
     totals.pitching.BB_allowed += Number(game.BB_allowed || 0);
     totals.pitching.SO_pitched += Number(game.SO_pitched || 0);
+    totals.pitching.pitches += Number(game.pitches || 0) || (Number(game.balls || 0) + Number(game.strikes || 0));
     totals.pitching.balls = (totals.pitching.balls || 0) + Number(game.balls || 0);
     totals.pitching.strikes = (totals.pitching.strikes || 0) + Number(game.strikes || 0);
   });
@@ -259,8 +268,8 @@ function buildForms() {
 
 function buildGameForm() {
   gameForm.innerHTML = '';
-  const battingKeys = new Set(['AB', 'H', '2B', '3B', 'HR', 'BB', 'HBP', 'SF', 'SO']);
-  const pitchingKeys = new Set(['IP', 'BF', 'H_allowed', 'ER', 'BB_allowed', 'SO_pitched', 'balls', 'strikes']);
+  const battingKeys = new Set(['AB', 'H', '2B', '3B', 'HR', 'R', 'BB', 'HBP', 'SF', 'SO']);
+  const pitchingKeys = new Set(['IP', 'BF', 'H_allowed', 'ER', 'HBP_allowed', 'BB_allowed', 'SO_pitched', 'pitches', 'balls', 'strikes']);
 
   const makeHeader = label => {
     const header = document.createElement('div');
@@ -335,8 +344,8 @@ function renderGames() {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td><strong>${game.date || ''}</strong><br>${game.opponent || ''}<br>${game.team || ''}</td>
-      <td><strong>Batting</strong><br>AB ${formatValue(game.AB || 0)} · H ${formatValue(game.H || 0)} · 2B ${formatValue(game['2B'] || 0)} · 3B ${formatValue(game['3B'] || 0)} · HR ${formatValue(game.HR || 0)} · BB ${formatValue(game.BB || 0)} · HBP ${formatValue(game.HBP || 0)} · SF ${formatValue(game.SF || 0)} · SO ${formatValue(game.SO || 0)}</td>
-      <td><strong>Pitching</strong><br>IP ${formatValue(game.IP || 0)} · BF ${formatValue(game.BF || 0)} · H ${formatValue(game.H_allowed || 0)} · ER ${formatValue(game.ER || 0)} · BB ${formatValue(game.BB_allowed || 0)} · SO ${formatValue(game.SO_pitched || 0)} · B ${formatValue(game.balls || 0)} · S ${formatValue(game.strikes || 0)}</td>
+      <td><strong>Batting</strong><br>AB ${formatValue(game.AB || 0)} · H ${formatValue(game.H || 0)} · 2B ${formatValue(game['2B'] || 0)} · 3B ${formatValue(game['3B'] || 0)} · HR ${formatValue(game.HR || 0)} · R ${formatValue(game.R || 0)} · BB ${formatValue(game.BB || 0)} · HBP ${formatValue(game.HBP || 0)} · SF ${formatValue(game.SF || 0)} · SO ${formatValue(game.SO || 0)}</td>
+      <td><strong>Pitching</strong><br>IP ${formatValue(game.IP || 0)} · BF ${formatValue(game.BF || 0)} · H ${formatValue(game.H_allowed || 0)} · ER ${formatValue(game.ER || 0)} · HBP ${formatValue(game.HBP_allowed || 0)} · BB ${formatValue(game.BB_allowed || 0)} · SO ${formatValue(game.SO_pitched || 0)} · P ${formatValue(game.pitches || ((game.balls || 0) + (game.strikes || 0)))} · B ${formatValue(game.balls || 0)} · S ${formatValue(game.strikes || 0)}</td>
       <td><button class="btn btn--ghost" data-index="${index}">Remove</button></td>
     `;
     gamesTableBody.appendChild(row);
