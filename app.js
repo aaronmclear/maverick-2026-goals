@@ -67,12 +67,33 @@ const uploadGamesCsv = document.getElementById('uploadGamesCsv');
 const gameForm = document.getElementById('gameForm');
 const saveGameButton = document.getElementById('saveGameButton');
 const cancelEditButton = document.getElementById('cancelEditButton');
+const resetSeasonButton = document.getElementById('resetSeasonButton');
 const teamFilter = document.getElementById('teamFilter');
 const chartView = document.getElementById('chartView');
 const chartStat = document.getElementById('chartStat');
 const chartContainer = document.getElementById('chart');
 
 const GOALS_PASSWORD = 'maverickbaseball';
+
+function blankCurrentStats() {
+  return {
+    batting: {
+      AVG: null,
+      OBP: null,
+      SLG: null,
+      OPS: null,
+      'K%': null
+    },
+    pitching: {
+      ERA: null,
+      WHIP: null,
+      'K/BB': null,
+      'K/BF': null,
+      'BB/BF': null,
+      'Strike%': null
+    }
+  };
+}
 
 function formatValue(value) {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -206,6 +227,7 @@ function getFilteredGames() {
 
 function applyGameTotals() {
   if (!state.data.games || state.data.games.length === 0) {
+    state.data.current = blankCurrentStats();
     return;
   }
   const totals = calculateTotals(getFilteredGames());
@@ -532,6 +554,20 @@ gamesTableBody.addEventListener('click', async event => {
 cancelEditButton.addEventListener('click', () => {
   gameStatus.textContent = '';
   resetGameForm();
+});
+
+resetSeasonButton.addEventListener('click', async () => {
+  state.data.games = [];
+  state.data.meta.updatedAt = new Date().toLocaleString();
+  resetGameForm();
+  applyGameTotals();
+  renderTables();
+  renderGames();
+  buildForms();
+  updateUpdatedAt();
+  renderChart();
+  gameStatus.textContent = '2026 season reset';
+  await saveData(state.data, gameStatus);
 });
 
 teamFilter.addEventListener('change', () => {
