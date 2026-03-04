@@ -26,6 +26,7 @@ const gameFields = [
   { key: '3B', label: '3B', type: 'number' },
   { key: 'HR', label: 'HR', type: 'number' },
   { key: 'R', label: 'Runs', type: 'number' },
+  { key: 'RBI', label: 'RBI', type: 'number' },
   { key: 'BB', label: 'BB', type: 'number' },
   { key: 'HBP', label: 'HBP', type: 'number' },
   { key: 'SF', label: 'SF', type: 'number' },
@@ -44,7 +45,8 @@ const gameFields = [
 
 const state = {
   data: null,
-  teamFilter: 'All'
+  teamFilter: 'All',
+  editingGameIndex: null
 };
 
 const battingTableBody = document.querySelector('#battingTable tbody');
@@ -63,6 +65,8 @@ const gamesCsv = document.getElementById('gamesCsv');
 const gamesCsvStatus = document.getElementById('gamesCsvStatus');
 const uploadGamesCsv = document.getElementById('uploadGamesCsv');
 const gameForm = document.getElementById('gameForm');
+const saveGameButton = document.getElementById('saveGameButton');
+const cancelEditButton = document.getElementById('cancelEditButton');
 const teamFilter = document.getElementById('teamFilter');
 const chartView = document.getElementById('chartView');
 const chartStat = document.getElementById('chartStat');
@@ -112,6 +116,7 @@ function calculateTotals(games) {
       '3B': 0,
       HR: 0,
       R: 0,
+      RBI: 0,
       BB: 0,
       HBP: 0,
       SF: 0,
@@ -138,6 +143,7 @@ function calculateTotals(games) {
     totals.batting['3B'] += Number(game['3B'] || 0);
     totals.batting.HR += Number(game.HR || 0);
     totals.batting.R += Number(game.R || 0);
+    totals.batting.RBI += Number(game.RBI || 0);
     totals.batting.BB += Number(game.BB || 0);
     totals.batting.HBP += Number(game.HBP || 0);
     totals.batting.SF += Number(game.SF || 0);
@@ -270,7 +276,7 @@ function buildForms() {
 
 function buildGameForm() {
   gameForm.innerHTML = '';
-  const battingKeys = new Set(['AB', 'H', '2B', '3B', 'HR', 'R', 'BB', 'HBP', 'SF', 'SO']);
+  const battingKeys = new Set(['AB', 'H', '2B', '3B', 'HR', 'R', 'RBI', 'BB', 'HBP', 'SF', 'SO']);
   const pitchingKeys = new Set(['IP', 'BF', 'H_allowed', 'ER', 'HBP_allowed', 'BB_allowed', 'SO_pitched', 'pitches', 'balls', 'strikes']);
 
   const makeHeader = label => {
@@ -338,6 +344,35 @@ function buildGameForm() {
   });
 }
 
+function setGameFormMode() {
+  const isEditing = state.editingGameIndex !== null;
+  saveGameButton.textContent = isEditing ? 'Save Game Changes' : 'Add Game';
+  cancelEditButton.classList.toggle('hidden', !isEditing);
+}
+
+function populateGameForm(game) {
+  gameFields.forEach(field => {
+    const input = gameForm.elements[field.key];
+    if (!input) return;
+    const value = game[field.key];
+    if (value === null || value === undefined || value === '') {
+      input.value = field.type === 'select' ? field.options[0] : '';
+      return;
+    }
+    if (field.type === 'number' || field.key === 'IP') {
+      input.value = Number(value).toFixed(3);
+      return;
+    }
+    input.value = value;
+  });
+}
+
+function resetGameForm() {
+  gameForm.reset();
+  state.editingGameIndex = null;
+  setGameFormMode();
+}
+
 function renderGames() {
   const games = getFilteredGames();
   gamesTableBody.innerHTML = '';
@@ -357,9 +392,12 @@ function renderGames() {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td><strong>${game.date || ''}</strong><br>${game.opponent || ''}<br>${game.team || ''}</td>
-      <td><strong>Batting</strong><br>AB ${formatValue(game.AB || 0)} · H ${formatValue(game.H || 0)} · 2B ${formatValue(game['2B'] || 0)} · 3B ${formatValue(game['3B'] || 0)} · HR ${formatValue(game.HR || 0)} · R ${formatValue(game.R || 0)} · BB ${formatValue(game.BB || 0)} · HBP ${formatValue(game.HBP || 0)} · SF ${formatValue(game.SF || 0)} · SO ${formatValue(game.SO || 0)}</td>
+      <td><strong>Batting</strong><br>AB ${formatValue(game.AB || 0)} · H ${formatValue(game.H || 0)} · 2B ${formatValue(game['2B'] || 0)} · 3B ${formatValue(game['3B'] || 0)} · HR ${formatValue(game.HR || 0)} · R ${formatValue(game.R || 0)} · RBI ${formatValue(game.RBI || 0)} · BB ${formatValue(game.BB || 0)} · HBP ${formatValue(game.HBP || 0)} · SF ${formatValue(game.SF || 0)} · SO ${formatValue(game.SO || 0)}</td>
       <td><strong>Pitching</strong><br>IP ${formatValue(game.IP || 0)} · BF ${formatValue(game.BF || 0)} · H ${formatValue(game.H_allowed || 0)} · ER ${formatValue(game.ER || 0)} · HBP ${formatValue(game.HBP_allowed || 0)} · BB ${formatValue(game.BB_allowed || 0)} · SO ${formatValue(game.SO_pitched || 0)} · P ${formatValue(game.pitches || ((game.balls || 0) + (game.strikes || 0)))} · B ${formatValue(game.balls || 0)} · S ${formatValue(game.strikes || 0)}</td>
-      <td><button class="btn btn--ghost" data-index="${index}">Remove</button></td>
+      <td>
+        <button class="btn btn--ghost" data-action="edit" data-index="${index}">Edit</button>
+        <button class="btn btn--ghost" data-action="remove" data-index="${index}">Remove</button>
+      </td>
     `;
     gamesTableBody.appendChild(row);
   });
@@ -443,26 +481,10 @@ gameForm.addEventListener('submit', async event => {
       game[field.key] = value || '';
     }
   });
-  state.data.games.push(game);
-  state.data.meta.updatedAt = new Date().toLocaleString();
-  applyGameTotals();
-  renderTables();
-  renderGames();
-  buildForms();
-  updateUpdatedAt();
-  gameForm.reset();
-  await saveData(state.data, gameStatus);
-});
-
-gamesTableBody.addEventListener('click', async event => {
-  if (event.target.tagName !== 'BUTTON') return;
-  const index = Number(event.target.dataset.index);
-  if (Number.isNaN(index)) return;
-  const games = getFilteredGames();
-  const gameToRemove = games[index];
-  const originalIndex = state.data.games.indexOf(gameToRemove);
-  if (originalIndex >= 0) {
-    state.data.games.splice(originalIndex, 1);
+  if (state.editingGameIndex !== null && state.data.games[state.editingGameIndex]) {
+    state.data.games[state.editingGameIndex] = game;
+  } else {
+    state.data.games.push(game);
   }
   state.data.meta.updatedAt = new Date().toLocaleString();
   applyGameTotals();
@@ -470,7 +492,46 @@ gamesTableBody.addEventListener('click', async event => {
   renderGames();
   buildForms();
   updateUpdatedAt();
+  resetGameForm();
+  renderChart();
   await saveData(state.data, gameStatus);
+});
+
+gamesTableBody.addEventListener('click', async event => {
+  if (event.target.tagName !== 'BUTTON') return;
+  const action = event.target.dataset.action || 'remove';
+  const index = Number(event.target.dataset.index);
+  if (Number.isNaN(index)) return;
+  const games = getFilteredGames();
+  const selectedGame = games[index];
+  const originalIndex = state.data.games.indexOf(selectedGame);
+  if (originalIndex < 0) return;
+
+  if (action === 'edit') {
+    state.editingGameIndex = originalIndex;
+    populateGameForm(state.data.games[originalIndex]);
+    setGameFormMode();
+    gameStatus.textContent = 'Editing saved game';
+    return;
+  }
+
+  state.data.games.splice(originalIndex, 1);
+  if (state.editingGameIndex === originalIndex) {
+    resetGameForm();
+  }
+  state.data.meta.updatedAt = new Date().toLocaleString();
+  applyGameTotals();
+  renderTables();
+  renderGames();
+  buildForms();
+  updateUpdatedAt();
+  renderChart();
+  await saveData(state.data, gameStatus);
+});
+
+cancelEditButton.addEventListener('click', () => {
+  gameStatus.textContent = '';
+  resetGameForm();
 });
 
 teamFilter.addEventListener('change', () => {
@@ -650,6 +711,7 @@ chartStat.addEventListener('change', () => {
   renderTables();
   buildForms();
   buildGameForm();
+  setGameFormMode();
   renderGames();
   updateUpdatedAt();
   buildChartStatOptions();

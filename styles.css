@@ -119,6 +119,20 @@ body {
   font-family: 'PT Serif', Georgia, serif;
 }
 
+.history-dropdown {
+  margin-top: 18px;
+  border: 1px solid #efe7ea;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #fcfafb;
+}
+
+.history-dropdown summary {
+  cursor: pointer;
+  font-weight: 700;
+  font-family: 'PT Serif', Georgia, serif;
+}
+
 .table-wrap {
   overflow-x: auto;
   margin-top: 12px;
