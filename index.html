@@ -7,6 +7,8 @@
     <link rel="stylesheet" href="styles.css" />
     <link rel="icon" href="favicon.png" />
     <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#7a0f2b" />
   </head>
   <body>
     <header class="hero">
@@ -105,6 +107,10 @@
         <div class="actions">
           <button class="btn" type="submit" form="gameForm">Add Game</button>
           <span class="status" id="gameStatus"></span>
+        </div>
+        <div class="panel__subheader">
+          <h3>Season Game History</h3>
+          <p class="panel__note">Each saved game should appear here.</p>
         </div>
         <div class="table-wrap">
           <table id="gamesTable">
