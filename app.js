@@ -67,6 +67,7 @@ const uploadGamesCsv = document.getElementById('uploadGamesCsv');
 const gameForm = document.getElementById('gameForm');
 const saveGameButton = document.getElementById('saveGameButton');
 const cancelEditButton = document.getElementById('cancelEditButton');
+const restorePreviousButton = document.getElementById('restorePreviousButton');
 const resetSeasonButton = document.getElementById('resetSeasonButton');
 const teamFilter = document.getElementById('teamFilter');
 const chartView = document.getElementById('chartView');
@@ -451,6 +452,33 @@ async function saveData(data, statusEl) {
   }
 }
 
+async function restorePreviousSave(statusEl) {
+  statusEl.textContent = 'Restoring...';
+  try {
+    const res = await fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'restorePrevious' })
+    });
+    if (!res.ok) throw new Error('Restore failed');
+    const payload = await res.json();
+    state.data = payload.data;
+    if (!state.data.games) state.data.games = [];
+    if (!state.data.meta) state.data.meta = {};
+    state.editingGameIndex = null;
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    resetGameForm();
+    renderChart();
+    statusEl.textContent = 'Previous save restored';
+  } catch (err) {
+    statusEl.textContent = 'No previous save found';
+  }
+}
+
 function updateUpdatedAt() {
   const stamp = state.data.meta.updatedAt || 'Just now';
   updatedAtEl.textContent = `Updated: ${stamp}`;
@@ -556,8 +584,13 @@ cancelEditButton.addEventListener('click', () => {
   resetGameForm();
 });
 
+restorePreviousButton.addEventListener('click', async () => {
+  await restorePreviousSave(gameStatus);
+});
+
 resetSeasonButton.addEventListener('click', async () => {
   state.data.games = [];
+  state.data.current = blankCurrentStats();
   state.data.meta.updatedAt = new Date().toLocaleString();
   resetGameForm();
   applyGameTotals();
@@ -566,8 +599,24 @@ resetSeasonButton.addEventListener('click', async () => {
   buildForms();
   updateUpdatedAt();
   renderChart();
-  gameStatus.textContent = '2026 season reset';
-  await saveData(state.data, gameStatus);
+  gameStatus.textContent = 'Resetting...';
+  try {
+    const res = await fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'clearSeason',
+        current: state.data.current,
+        meta: state.data.meta
+      })
+    });
+    if (!res.ok) throw new Error('Reset failed');
+    const payload = await res.json();
+    state.data = payload.data;
+    gameStatus.textContent = '2026 season reset';
+  } catch (err) {
+    gameStatus.textContent = 'Reset failed';
+  }
 });
 
 teamFilter.addEventListener('change', () => {
