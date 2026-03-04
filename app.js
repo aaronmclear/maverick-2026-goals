@@ -342,6 +342,17 @@ function renderGames() {
   const games = getFilteredGames();
   gamesTableBody.innerHTML = '';
 
+  if (!games.length) {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td colspan="4">
+        <div class="panel__note">No saved games yet for this filter.</div>
+      </td>
+    `;
+    gamesTableBody.appendChild(row);
+    return;
+  }
+
   games.forEach((game, index) => {
     const row = document.createElement('tr');
     row.innerHTML = `
