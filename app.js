@@ -369,8 +369,12 @@ function buildGameForm() {
 
 function setGameFormMode() {
   const isEditing = state.editingGameIndex !== null;
-  saveGameButton.textContent = isEditing ? 'Save Game Changes' : 'Add Game';
-  cancelEditButton.classList.toggle('hidden', !isEditing);
+  if (saveGameButton) {
+    saveGameButton.textContent = isEditing ? 'Save Game Changes' : 'Add Game';
+  }
+  if (cancelEditButton) {
+    cancelEditButton.classList.toggle('hidden', !isEditing);
+  }
 }
 
 function populateGameForm(game) {
@@ -508,15 +512,17 @@ goalsForm.addEventListener('submit', async event => {
   await saveData(state.data, goalsStatus);
 });
 
-unlockGoals.addEventListener('click', () => {
-  if (goalsPassword.value === GOALS_PASSWORD) {
-    localStorage.setItem('goalsUnlocked', 'true');
-    goalsLockStatus.textContent = 'Unlocked';
-    setGoalsUnlocked(true);
-  } else {
-    goalsLockStatus.textContent = 'Wrong password';
-  }
-});
+if (unlockGoals) {
+  unlockGoals.addEventListener('click', () => {
+    if (goalsPassword.value === GOALS_PASSWORD) {
+      localStorage.setItem('goalsUnlocked', 'true');
+      goalsLockStatus.textContent = 'Unlocked';
+      setGoalsUnlocked(true);
+    } else {
+      goalsLockStatus.textContent = 'Wrong password';
+    }
+  });
+}
 
 gameForm.addEventListener('submit', async event => {
   event.preventDefault();
@@ -579,45 +585,51 @@ gamesTableBody.addEventListener('click', async event => {
   await saveData(state.data, gameStatus);
 });
 
-cancelEditButton.addEventListener('click', () => {
-  gameStatus.textContent = '';
-  resetGameForm();
-});
+if (cancelEditButton) {
+  cancelEditButton.addEventListener('click', () => {
+    gameStatus.textContent = '';
+    resetGameForm();
+  });
+}
 
-restorePreviousButton.addEventListener('click', async () => {
-  await restorePreviousSave(gameStatus);
-});
+if (restorePreviousButton) {
+  restorePreviousButton.addEventListener('click', async () => {
+    await restorePreviousSave(gameStatus);
+  });
+}
 
-resetSeasonButton.addEventListener('click', async () => {
-  state.data.games = [];
-  state.data.current = blankCurrentStats();
-  state.data.meta.updatedAt = new Date().toLocaleString();
-  resetGameForm();
-  applyGameTotals();
-  renderTables();
-  renderGames();
-  buildForms();
-  updateUpdatedAt();
-  renderChart();
-  gameStatus.textContent = 'Resetting...';
-  try {
-    const res = await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'clearSeason',
-        current: state.data.current,
-        meta: state.data.meta
-      })
-    });
-    if (!res.ok) throw new Error('Reset failed');
-    const payload = await res.json();
-    state.data = payload.data;
-    gameStatus.textContent = '2026 season reset';
-  } catch (err) {
-    gameStatus.textContent = 'Reset failed';
-  }
-});
+if (resetSeasonButton) {
+  resetSeasonButton.addEventListener('click', async () => {
+    state.data.games = [];
+    state.data.current = blankCurrentStats();
+    state.data.meta.updatedAt = new Date().toLocaleString();
+    resetGameForm();
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    renderChart();
+    gameStatus.textContent = 'Resetting...';
+    try {
+      const res = await fetch('/api/data', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'clearSeason',
+          current: state.data.current,
+          meta: state.data.meta
+        })
+      });
+      if (!res.ok) throw new Error('Reset failed');
+      const payload = await res.json();
+      state.data = payload.data;
+      gameStatus.textContent = '2026 season reset';
+    } catch (err) {
+      gameStatus.textContent = 'Reset failed';
+    }
+  });
+}
 
 teamFilter.addEventListener('change', () => {
   state.teamFilter = teamFilter.value;
