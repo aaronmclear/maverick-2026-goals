@@ -46,7 +46,8 @@ const gameFields = [
 const state = {
   data: null,
   teamFilter: 'All',
-  editingGameIndex: null
+  editingGameIndex: null,
+  loadedFromFallback: false
 };
 
 const battingTableBody = document.querySelector('#battingTable tbody');
@@ -434,14 +435,20 @@ async function loadData() {
   try {
     const res = await fetch('/api/data');
     if (!res.ok) throw new Error('API unavailable');
+    state.loadedFromFallback = false;
     return await res.json();
   } catch (err) {
     const fallback = await fetch('data.json');
+    state.loadedFromFallback = true;
     return await fallback.json();
   }
 }
 
 async function saveData(data, statusEl) {
+  if (state.loadedFromFallback) {
+    statusEl.textContent = 'Read-only mode: refresh and try again';
+    return;
+  }
   statusEl.textContent = 'Saving...';
   try {
     const res = await fetch('/api/data', {
@@ -457,6 +464,10 @@ async function saveData(data, statusEl) {
 }
 
 async function restorePreviousSave(statusEl) {
+  if (state.loadedFromFallback) {
+    statusEl.textContent = 'Refresh first before restoring';
+    return;
+  }
   statusEl.textContent = 'Restoring...';
   try {
     const res = await fetch('/api/data', {
@@ -485,7 +496,9 @@ async function restorePreviousSave(statusEl) {
 
 function updateUpdatedAt() {
   const stamp = state.data.meta.updatedAt || 'Just now';
-  updatedAtEl.textContent = `Updated: ${stamp}`;
+  updatedAtEl.textContent = state.loadedFromFallback
+    ? `Updated: ${stamp} (read-only fallback)`
+    : `Updated: ${stamp}`;
 }
 
 function setGoalsUnlocked(unlocked) {
@@ -500,6 +513,10 @@ function setGoalsUnlocked(unlocked) {
 
 goalsForm.addEventListener('submit', async event => {
   event.preventDefault();
+  if (state.loadedFromFallback) {
+    goalsStatus.textContent = 'Read-only mode: refresh and try again';
+    return;
+  }
   const formData = new FormData(goalsForm);
   formData.forEach((value, key) => {
     const [section, stat] = key.split('.');
@@ -526,6 +543,10 @@ if (unlockGoals) {
 
 gameForm.addEventListener('submit', async event => {
   event.preventDefault();
+  if (state.loadedFromFallback) {
+    gameStatus.textContent = 'Read-only mode: refresh and try again';
+    return;
+  }
   const formData = new FormData(gameForm);
   const game = {};
   gameFields.forEach(field => {
@@ -555,6 +576,10 @@ gameForm.addEventListener('submit', async event => {
 
 gamesTableBody.addEventListener('click', async event => {
   if (event.target.tagName !== 'BUTTON') return;
+  if (state.loadedFromFallback) {
+    gameStatus.textContent = 'Read-only mode: refresh and try again';
+    return;
+  }
   const action = event.target.dataset.action || 'remove';
   const index = Number(event.target.dataset.index);
   if (Number.isNaN(index)) return;
@@ -600,6 +625,10 @@ if (restorePreviousButton) {
 
 if (resetSeasonButton) {
   resetSeasonButton.addEventListener('click', async () => {
+    if (state.loadedFromFallback) {
+      gameStatus.textContent = 'Refresh first before resetting';
+      return;
+    }
     state.data.games = [];
     state.data.current = blankCurrentStats();
     state.data.meta.updatedAt = new Date().toLocaleString();
@@ -655,6 +684,10 @@ function parseCsv(text) {
 }
 
 uploadGamesCsv.addEventListener('click', async () => {
+  if (state.loadedFromFallback) {
+    gamesCsvStatus.textContent = 'Read-only mode: refresh and try again';
+    return;
+  }
   if (!gamesCsv.files.length) {
     gamesCsvStatus.textContent = 'Pick a CSV file first.';
     return;
