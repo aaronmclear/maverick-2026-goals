@@ -473,15 +473,28 @@ function renderGames() {
 }
 
 async function loadData() {
+  const isLocalDev =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.protocol === 'file:';
   try {
     const res = await fetch('/api/data');
     if (!res.ok) throw new Error('API unavailable');
     state.loadedFromFallback = false;
     return await res.json();
   } catch (err) {
-    const fallback = await fetch('data.json');
     state.loadedFromFallback = true;
-    return await fallback.json();
+    if (isLocalDev) {
+      const fallback = await fetch('data.json');
+      return await fallback.json();
+    }
+    return {
+      meta: { title: 'Maverick 2026 Baseball Goals', updatedAt: 'Server unavailable' },
+      baseline: { batting: {}, pitching: {} },
+      goals: { batting: {}, pitching: {} },
+      current: blankCurrentStats(),
+      games: []
+    };
   }
 }
 
@@ -569,7 +582,7 @@ async function restoreSeedData(statusEl) {
 function updateUpdatedAt() {
   const stamp = state.data.meta.updatedAt || 'Just now';
   updatedAtEl.textContent = state.loadedFromFallback
-    ? `Updated: ${stamp} (read-only fallback)`
+    ? `Updated: ${stamp} (read-only: storage unavailable)`
     : `Updated: ${stamp}`;
 }
 

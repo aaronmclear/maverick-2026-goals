@@ -4,6 +4,7 @@ const path = require('path');
 const { put, list } = require('@vercel/blob');
 const BLOB_TOKEN = process.env.BLOB_READ_WRITE_TOKEN;
 const BLOB_KEY = 'maverick-2026/data.json';
+const IS_VERCEL = Boolean(process.env.VERCEL);
 
 async function blobGet() {
   const versions = await blobList();
@@ -51,9 +52,16 @@ async function fileSet(value) {
 }
 
 async function getStoredData() {
+  if (IS_VERCEL && !BLOB_TOKEN) {
+    throw new Error('Storage not configured');
+  }
   if (BLOB_TOKEN) {
-    const data = await blobGet();
-    if (data) return data;
+    let data = await blobGet();
+    if (!data) {
+      data = await fileGet();
+      await blobSet(data);
+    }
+    return data;
   }
   return await fileGet();
 }
@@ -83,22 +91,16 @@ function mergePreservingGames(existing, incoming) {
 module.exports = async function handler(req, res) {
   try {
     if (req.method === 'GET') {
+      if (IS_VERCEL && !BLOB_TOKEN) {
+        return res.status(503).json({ error: 'Storage not configured', code: 'STORAGE_UNCONFIGURED' });
+      }
       if (req.query && req.query.history === '1' && BLOB_TOKEN) {
         const versions = await blobList();
         return res.status(200).json({
           versions: versions.map(({ url, uploadedAt, pathname }) => ({ url, uploadedAt, pathname }))
         });
       }
-      let data = null;
-      if (BLOB_TOKEN) {
-        data = await blobGet();
-        if (!data) {
-          data = await fileGet();
-          await blobSet(data);
-        }
-      } else {
-        data = await fileGet();
-      }
+      const data = await getStoredData();
       return res.status(200).json(data);
     }
 
@@ -150,16 +152,19 @@ module.exports = async function handler(req, res) {
       }
       const existing = await getStoredData();
       const merged = mergePreservingGames(existing, payload);
-      if (BLOB_TOKEN) {
-        await blobSet(merged);
-      } else {
-        await fileSet(merged);
+      if (IS_VERCEL && !BLOB_TOKEN) {
+        return res.status(503).json({ error: 'Storage not configured', code: 'STORAGE_UNCONFIGURED' });
       }
+      if (BLOB_TOKEN) await blobSet(merged);
+      else await fileSet(merged);
       return res.status(200).json({ ok: true });
     }
 
     return res.status(405).json({ error: 'Method not allowed' });
   } catch (err) {
+    if (String(err && err.message).includes('Storage not configured')) {
+      return res.status(503).json({ error: 'Storage not configured', code: 'STORAGE_UNCONFIGURED' });
+    }
     return res.status(500).json({ error: 'Server error' });
   }
 }
