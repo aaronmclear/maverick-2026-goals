@@ -259,6 +259,15 @@ function formatHistoryIP(value) {
   return num.toFixed(1);
 }
 
+function formatHistoryDate(value) {
+  if (!value) return '';
+  const dt = new Date(value);
+  if (Number.isNaN(dt.getTime())) return value;
+  const month = String(dt.getMonth() + 1).padStart(2, '0');
+  const day = String(dt.getDate()).padStart(2, '0');
+  return `${month}/${day}`;
+}
+
 function applyGameTotals() {
   if (!state.data.games || state.data.games.length === 0) {
     state.data.current = blankCurrentStats();
@@ -451,7 +460,7 @@ function renderGames() {
   displayGames.forEach(({ game, originalIndex }) => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td><strong>${game.date || ''}</strong><br>${game.opponent || ''}<br>${game.team || ''}</td>
+      <td><strong>${formatHistoryDate(game.date)}</strong><br>${game.opponent || ''}<br>${game.team || ''}</td>
       <td><strong>Batting</strong><br>AB ${formatHistoryWhole(game.AB)} · H ${formatHistoryWhole(game.H)} · 2B ${formatHistoryWhole(game['2B'])} · 3B ${formatHistoryWhole(game['3B'])} · HR ${formatHistoryWhole(game.HR)} · R ${formatHistoryWhole(game.R)} · RBI ${formatHistoryWhole(game.RBI)} · BB ${formatHistoryWhole(game.BB)} · HBP ${formatHistoryWhole(game.HBP)} · SF ${formatHistoryWhole(game.SF)} · SO ${formatHistoryWhole(game.SO)}</td>
       <td><strong>Pitching</strong><br>IP ${formatHistoryIP(game.IP)} · BF ${formatHistoryWhole(game.BF)} · H ${formatHistoryWhole(game.H_allowed)} · ER ${formatHistoryWhole(game.ER)} · HBP ${formatHistoryWhole(game.HBP_allowed)} · BB ${formatHistoryWhole(game.BB_allowed)} · SO ${formatHistoryWhole(game.SO_pitched)} · P ${formatHistoryWhole(game.pitches || ((game.balls || 0) + (game.strikes || 0)))} · B ${formatHistoryWhole(game.balls)} · S ${formatHistoryWhole(game.strikes)}</td>
       <td>
