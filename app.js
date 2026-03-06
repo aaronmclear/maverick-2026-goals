@@ -501,7 +501,7 @@ async function loadData() {
 async function saveData(data, statusEl) {
   if (state.loadedFromFallback) {
     statusEl.textContent = 'Read-only mode: refresh and try again';
-    return;
+    return false;
   }
   statusEl.textContent = 'Saving...';
   try {
@@ -512,9 +512,20 @@ async function saveData(data, statusEl) {
     });
     if (!res.ok) throw new Error('Save failed');
     statusEl.textContent = 'Saved';
+    return true;
   } catch (err) {
     statusEl.textContent = 'Save failed (check connection)';
+    return false;
   }
+}
+
+async function refreshStateFromServer() {
+  const res = await fetch('/api/data', { cache: 'no-store' });
+  if (!res.ok) throw new Error('Reload failed');
+  const payload = await res.json();
+  state.data = payload;
+  if (!state.data.games) state.data.games = [];
+  if (!state.data.meta) state.data.meta = {};
 }
 
 async function restorePreviousSave(statusEl) {
@@ -608,10 +619,28 @@ goalsForm.addEventListener('submit', async event => {
     const num = value === '' ? null : Number(value);
     state.data.goals[section][stat] = Number.isNaN(num) ? null : num;
   });
+  const before = JSON.parse(JSON.stringify(state.data));
   state.data.meta.updatedAt = new Date().toLocaleString();
   renderTables();
   updateUpdatedAt();
-  await saveData(state.data, goalsStatus);
+  const ok = await saveData(state.data, goalsStatus);
+  if (!ok) {
+    state.data = before;
+    renderTables();
+    updateUpdatedAt();
+    return;
+  }
+  try {
+    await refreshStateFromServer();
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    renderChart();
+  } catch (err) {
+    goalsStatus.textContent = 'Saved, but refresh failed';
+  }
 });
 
 if (unlockGoals) {
@@ -643,6 +672,7 @@ gameForm.addEventListener('submit', async event => {
       game[field.key] = value || '';
     }
   });
+  const before = JSON.parse(JSON.stringify(state.data));
   if (state.editingGameIndex !== null && state.data.games[state.editingGameIndex]) {
     state.data.games[state.editingGameIndex] = game;
   } else {
@@ -656,7 +686,28 @@ gameForm.addEventListener('submit', async event => {
   updateUpdatedAt();
   resetGameForm();
   renderChart();
-  await saveData(state.data, gameStatus);
+  const ok = await saveData(state.data, gameStatus);
+  if (!ok) {
+    state.data = before;
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    renderChart();
+    return;
+  }
+  try {
+    await refreshStateFromServer();
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    renderChart();
+  } catch (err) {
+    gameStatus.textContent = 'Saved, but refresh failed';
+  }
 });
 
 gamesTableBody.addEventListener('click', async event => {
@@ -678,6 +729,7 @@ gamesTableBody.addEventListener('click', async event => {
     return;
   }
 
+  const before = JSON.parse(JSON.stringify(state.data));
   state.data.games.splice(originalIndex, 1);
   if (state.editingGameIndex === originalIndex) {
     resetGameForm();
@@ -689,7 +741,28 @@ gamesTableBody.addEventListener('click', async event => {
   buildForms();
   updateUpdatedAt();
   renderChart();
-  await saveData(state.data, gameStatus);
+  const ok = await saveData(state.data, gameStatus);
+  if (!ok) {
+    state.data = before;
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    renderChart();
+    return;
+  }
+  try {
+    await refreshStateFromServer();
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    renderChart();
+  } catch (err) {
+    gameStatus.textContent = 'Saved, but refresh failed';
+  }
 });
 
 if (cancelEditButton) {
@@ -787,6 +860,7 @@ uploadGamesCsv.addEventListener('click', async () => {
     gamesCsvStatus.textContent = 'Invalid CSV format.';
     return;
   }
+  const before = JSON.parse(JSON.stringify(state.data));
   rows.forEach(row => {
     const game = {};
     gameFields.forEach(field => {
@@ -807,7 +881,28 @@ uploadGamesCsv.addEventListener('click', async () => {
   buildForms();
   updateUpdatedAt();
   renderChart();
-  await saveData(state.data, gamesCsvStatus);
+  const ok = await saveData(state.data, gamesCsvStatus);
+  if (!ok) {
+    state.data = before;
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    renderChart();
+    return;
+  }
+  try {
+    await refreshStateFromServer();
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    renderChart();
+  } catch (err) {
+    gamesCsvStatus.textContent = 'Saved, but refresh failed';
+  }
 });
 
 function buildChartStatOptions() {
