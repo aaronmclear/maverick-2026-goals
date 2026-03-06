@@ -27,6 +27,7 @@ const gameFields = [
   { key: 'HR', label: 'HR', type: 'number' },
   { key: 'R', label: 'Runs', type: 'number' },
   { key: 'RBI', label: 'RBI', type: 'number' },
+  { key: 'SB', label: 'SB', type: 'number' },
   { key: 'BB', label: 'BB', type: 'number' },
   { key: 'HBP', label: 'HBP', type: 'number' },
   { key: 'SF', label: 'SF', type: 'number' },
@@ -180,6 +181,7 @@ function calculateTotals(games) {
       HR: 0,
       R: 0,
       RBI: 0,
+      SB: 0,
       BB: 0,
       HBP: 0,
       SF: 0,
@@ -207,6 +209,7 @@ function calculateTotals(games) {
     totals.batting.HR += Number(game.HR || 0);
     totals.batting.R += Number(game.R || 0);
     totals.batting.RBI += Number(game.RBI || 0);
+    totals.batting.SB += Number(game.SB || 0);
     totals.batting.BB += Number(game.BB || 0);
     totals.batting.HBP += Number(game.HBP || 0);
     totals.batting.SF += Number(game.SF || 0);
@@ -300,11 +303,11 @@ function formatHistoryIP(value) {
 
 function formatHistoryDate(value) {
   if (!value) return '';
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value).trim());
+  if (match) return `${match[2]}/${match[3]}`;
   const dt = new Date(value);
   if (Number.isNaN(dt.getTime())) return value;
-  const month = String(dt.getMonth() + 1).padStart(2, '0');
-  const day = String(dt.getDate()).padStart(2, '0');
-  return `${month}/${day}`;
+  return dt.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' });
 }
 
 function applyGameTotals() {
@@ -380,7 +383,7 @@ function buildForms() {
 
 function buildGameForm() {
   gameForm.innerHTML = '';
-  const battingKeys = new Set(['AB', 'H', '2B', '3B', 'HR', 'R', 'RBI', 'BB', 'HBP', 'SF', 'SO']);
+  const battingKeys = new Set(['AB', 'H', '2B', '3B', 'HR', 'R', 'RBI', 'SB', 'BB', 'HBP', 'SF', 'SO']);
   const pitchingKeys = new Set(['IP', 'BF', 'H_allowed', 'ER', 'HBP_allowed', 'BB_allowed', 'SO_pitched', 'pitches', 'balls', 'strikes']);
 
   const makeHeader = label => {
@@ -500,7 +503,7 @@ function renderGames() {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td><strong>${formatHistoryDate(game.date)}</strong><br>${game.opponent || ''}<br>${game.team || ''}</td>
-      <td><strong>Batting</strong><br>AB ${formatHistoryWhole(game.AB)} · H ${formatHistoryWhole(game.H)} · 2B ${formatHistoryWhole(game['2B'])} · 3B ${formatHistoryWhole(game['3B'])} · HR ${formatHistoryWhole(game.HR)} · R ${formatHistoryWhole(game.R)} · RBI ${formatHistoryWhole(game.RBI)} · BB ${formatHistoryWhole(game.BB)} · HBP ${formatHistoryWhole(game.HBP)} · SF ${formatHistoryWhole(game.SF)} · SO ${formatHistoryWhole(game.SO)}</td>
+      <td><strong>Batting</strong><br>AB ${formatHistoryWhole(game.AB)} · H ${formatHistoryWhole(game.H)} · 2B ${formatHistoryWhole(game['2B'])} · 3B ${formatHistoryWhole(game['3B'])} · HR ${formatHistoryWhole(game.HR)} · R ${formatHistoryWhole(game.R)} · RBI ${formatHistoryWhole(game.RBI)} · SB ${formatHistoryWhole(game.SB)} · BB ${formatHistoryWhole(game.BB)} · HBP ${formatHistoryWhole(game.HBP)} · SF ${formatHistoryWhole(game.SF)} · SO ${formatHistoryWhole(game.SO)}</td>
       <td><strong>Pitching</strong><br>IP ${formatHistoryIP(game.IP)} · BF ${formatHistoryWhole(game.BF)} · H ${formatHistoryWhole(game.H_allowed)} · ER ${formatHistoryWhole(game.ER)} · HBP ${formatHistoryWhole(game.HBP_allowed)} · BB ${formatHistoryWhole(game.BB_allowed)} · SO ${formatHistoryWhole(game.SO_pitched)} · P ${formatHistoryWhole(game.pitches || ((game.balls || 0) + (game.strikes || 0)))} · B ${formatHistoryWhole(game.balls)} · S ${formatHistoryWhole(game.strikes)}</td>
       <td>
         <button class="btn btn--ghost" data-action="edit" data-index="${originalIndex}">Edit</button>
