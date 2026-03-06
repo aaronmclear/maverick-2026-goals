@@ -228,6 +228,37 @@ function getFilteredGames() {
   return state.data.games.filter(game => (game.team || '') === state.teamFilter);
 }
 
+function getDisplayGames() {
+  const filtered = getFilteredGames();
+  const mapped = filtered.map(game => ({
+    game,
+    originalIndex: state.data.games.indexOf(game)
+  }));
+  mapped.sort((a, b) => {
+    const aTime = Date.parse(a.game.date || '');
+    const bTime = Date.parse(b.game.date || '');
+    const aValid = Number.isFinite(aTime);
+    const bValid = Number.isFinite(bTime);
+    if (aValid && bValid && aTime !== bTime) return bTime - aTime;
+    if (aValid && !bValid) return -1;
+    if (!aValid && bValid) return 1;
+    return b.originalIndex - a.originalIndex;
+  });
+  return mapped;
+}
+
+function formatHistoryWhole(value) {
+  const num = Number(value || 0);
+  if (Number.isNaN(num)) return '0';
+  return String(Math.round(num));
+}
+
+function formatHistoryIP(value) {
+  const num = Number(value || 0);
+  if (Number.isNaN(num)) return '0.0';
+  return num.toFixed(1);
+}
+
 function applyGameTotals() {
   if (!state.data.games || state.data.games.length === 0) {
     state.data.current = blankCurrentStats();
@@ -403,10 +434,10 @@ function resetGameForm() {
 }
 
 function renderGames() {
-  const games = getFilteredGames();
+  const displayGames = getDisplayGames();
   gamesTableBody.innerHTML = '';
 
-  if (!games.length) {
+  if (!displayGames.length) {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td colspan="4">
@@ -417,15 +448,15 @@ function renderGames() {
     return;
   }
 
-  games.forEach((game, index) => {
+  displayGames.forEach(({ game, originalIndex }) => {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td><strong>${game.date || ''}</strong><br>${game.opponent || ''}<br>${game.team || ''}</td>
-      <td><strong>Batting</strong><br>AB ${formatValue(game.AB || 0)} · H ${formatValue(game.H || 0)} · 2B ${formatValue(game['2B'] || 0)} · 3B ${formatValue(game['3B'] || 0)} · HR ${formatValue(game.HR || 0)} · R ${formatValue(game.R || 0)} · RBI ${formatValue(game.RBI || 0)} · BB ${formatValue(game.BB || 0)} · HBP ${formatValue(game.HBP || 0)} · SF ${formatValue(game.SF || 0)} · SO ${formatValue(game.SO || 0)}</td>
-      <td><strong>Pitching</strong><br>IP ${formatValue(game.IP || 0)} · BF ${formatValue(game.BF || 0)} · H ${formatValue(game.H_allowed || 0)} · ER ${formatValue(game.ER || 0)} · HBP ${formatValue(game.HBP_allowed || 0)} · BB ${formatValue(game.BB_allowed || 0)} · SO ${formatValue(game.SO_pitched || 0)} · P ${formatValue(game.pitches || ((game.balls || 0) + (game.strikes || 0)))} · B ${formatValue(game.balls || 0)} · S ${formatValue(game.strikes || 0)}</td>
+      <td><strong>Batting</strong><br>AB ${formatHistoryWhole(game.AB)} · H ${formatHistoryWhole(game.H)} · 2B ${formatHistoryWhole(game['2B'])} · 3B ${formatHistoryWhole(game['3B'])} · HR ${formatHistoryWhole(game.HR)} · R ${formatHistoryWhole(game.R)} · RBI ${formatHistoryWhole(game.RBI)} · BB ${formatHistoryWhole(game.BB)} · HBP ${formatHistoryWhole(game.HBP)} · SF ${formatHistoryWhole(game.SF)} · SO ${formatHistoryWhole(game.SO)}</td>
+      <td><strong>Pitching</strong><br>IP ${formatHistoryIP(game.IP)} · BF ${formatHistoryWhole(game.BF)} · H ${formatHistoryWhole(game.H_allowed)} · ER ${formatHistoryWhole(game.ER)} · HBP ${formatHistoryWhole(game.HBP_allowed)} · BB ${formatHistoryWhole(game.BB_allowed)} · SO ${formatHistoryWhole(game.SO_pitched)} · P ${formatHistoryWhole(game.pitches || ((game.balls || 0) + (game.strikes || 0)))} · B ${formatHistoryWhole(game.balls)} · S ${formatHistoryWhole(game.strikes)}</td>
       <td>
-        <button class="btn btn--ghost" data-action="edit" data-index="${index}">Edit</button>
-        <button class="btn btn--ghost" data-action="remove" data-index="${index}">Remove</button>
+        <button class="btn btn--ghost" data-action="edit" data-index="${originalIndex}">Edit</button>
+        <button class="btn btn--ghost" data-action="remove" data-index="${originalIndex}">Remove</button>
       </td>
     `;
     gamesTableBody.appendChild(row);
@@ -613,12 +644,9 @@ gamesTableBody.addEventListener('click', async event => {
     return;
   }
   const action = event.target.dataset.action || 'remove';
-  const index = Number(event.target.dataset.index);
-  if (Number.isNaN(index)) return;
-  const games = getFilteredGames();
-  const selectedGame = games[index];
-  const originalIndex = state.data.games.indexOf(selectedGame);
-  if (originalIndex < 0) return;
+  const originalIndex = Number(event.target.dataset.index);
+  if (Number.isNaN(originalIndex) || originalIndex < 0) return;
+  if (!state.data.games[originalIndex]) return;
 
   if (action === 'edit') {
     state.editingGameIndex = originalIndex;
