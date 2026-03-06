@@ -69,6 +69,7 @@ const gameForm = document.getElementById('gameForm');
 const saveGameButton = document.getElementById('saveGameButton');
 const cancelEditButton = document.getElementById('cancelEditButton');
 const restorePreviousButton = document.getElementById('restorePreviousButton');
+const restoreSeedButton = document.getElementById('restoreSeedButton');
 const resetSeasonButton = document.getElementById('resetSeasonButton');
 const teamFilter = document.getElementById('teamFilter');
 const chartView = document.getElementById('chartView');
@@ -494,6 +495,37 @@ async function restorePreviousSave(statusEl) {
   }
 }
 
+async function restoreSeedData(statusEl) {
+  if (state.loadedFromFallback) {
+    statusEl.textContent = 'Refresh first before restoring';
+    return;
+  }
+  statusEl.textContent = 'Restoring seed data...';
+  try {
+    const res = await fetch('/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'restoreSeed' })
+    });
+    if (!res.ok) throw new Error('Restore failed');
+    const payload = await res.json();
+    state.data = payload.data;
+    if (!state.data.games) state.data.games = [];
+    if (!state.data.meta) state.data.meta = {};
+    state.editingGameIndex = null;
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    resetGameForm();
+    renderChart();
+    statusEl.textContent = 'Seed data restored';
+  } catch (err) {
+    statusEl.textContent = 'Seed restore failed';
+  }
+}
+
 function updateUpdatedAt() {
   const stamp = state.data.meta.updatedAt || 'Just now';
   updatedAtEl.textContent = state.loadedFromFallback
@@ -620,6 +652,12 @@ if (cancelEditButton) {
 if (restorePreviousButton) {
   restorePreviousButton.addEventListener('click', async () => {
     await restorePreviousSave(gameStatus);
+  });
+}
+
+if (restoreSeedButton) {
+  restoreSeedButton.addEventListener('click', async () => {
+    await restoreSeedData(gameStatus);
   });
 }
 

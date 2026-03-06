@@ -121,6 +121,15 @@ module.exports = async function handler(req, res) {
         await blobSet(restored);
         return res.status(200).json({ ok: true, data: restored });
       }
+      if (payload && payload.action === 'restoreSeed') {
+        const seed = await fileGet();
+        if (BLOB_TOKEN) {
+          await blobSet(seed);
+        } else {
+          await fileSet(seed);
+        }
+        return res.status(200).json({ ok: true, data: seed });
+      }
       if (payload && payload.action === 'clearSeason') {
         const existing = await getStoredData();
         const cleared = {
