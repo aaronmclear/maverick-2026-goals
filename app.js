@@ -69,10 +69,6 @@ const uploadGamesCsv = document.getElementById('uploadGamesCsv');
 const gameForm = document.getElementById('gameForm');
 const saveGameButton = document.getElementById('saveGameButton');
 const cancelEditButton = document.getElementById('cancelEditButton');
-const restorePreviousButton = document.getElementById('restorePreviousButton');
-const restoreSeedButton = document.getElementById('restoreSeedButton');
-const recoverLocalButton = document.getElementById('recoverLocalButton');
-const resetSeasonButton = document.getElementById('resetSeasonButton');
 const teamFilter = document.getElementById('teamFilter');
 const chartView = document.getElementById('chartView');
 const chartStat = document.getElementById('chartStat');
@@ -699,118 +695,6 @@ async function refreshStateFromServer() {
   if (!state.data.meta) state.data.meta = {};
 }
 
-async function restorePreviousSave(statusEl) {
-  if (state.loadedFromFallback) {
-    statusEl.textContent = 'Refresh first before restoring';
-    return;
-  }
-  statusEl.textContent = 'Restoring...';
-  try {
-    const res = await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'restorePrevious' })
-    });
-    if (!res.ok) throw new Error('Restore failed');
-    const payload = await res.json();
-    state.data = payload.data;
-    if (!state.data.games) state.data.games = [];
-    if (!state.data.meta) state.data.meta = {};
-    state.editingGameIndex = null;
-    applyGameTotals();
-    renderTables();
-    renderGames();
-    buildForms();
-    updateUpdatedAt();
-    resetGameForm();
-    renderChart();
-    statusEl.textContent = 'Previous save restored';
-  } catch (err) {
-    statusEl.textContent = 'No previous save found';
-  }
-}
-
-async function restoreSeedData(statusEl) {
-  if (state.loadedFromFallback) {
-    statusEl.textContent = 'Refresh first before restoring';
-    return;
-  }
-  statusEl.textContent = 'Restoring seed data...';
-  try {
-    const res = await fetch('/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'restoreSeed' })
-    });
-    if (!res.ok) throw new Error('Restore failed');
-    const payload = await res.json();
-    state.data = payload.data;
-    if (!state.data.games) state.data.games = [];
-    if (!state.data.meta) state.data.meta = {};
-    state.editingGameIndex = null;
-    applyGameTotals();
-    renderTables();
-    renderGames();
-    buildForms();
-    updateUpdatedAt();
-    resetGameForm();
-    renderChart();
-    statusEl.textContent = 'Seed data restored';
-  } catch (err) {
-    statusEl.textContent = 'Seed restore failed';
-  }
-}
-
-async function recoverLocalGames(statusEl) {
-  if (state.loadedFromFallback) {
-    statusEl.textContent = 'Refresh first before recovering';
-    return;
-  }
-  const backup = readLocalBackup();
-  const localGames = Array.isArray(backup?.games) ? backup.games : [];
-  if (!localGames.length) {
-    statusEl.textContent = 'No local backup games found';
-    return;
-  }
-
-  const seen = new Set((state.data.games || []).map(gameIdentity));
-  const merged = [...(state.data.games || [])];
-  localGames.forEach(game => {
-    const id = gameIdentity(game);
-    if (!seen.has(id)) {
-      seen.add(id);
-      merged.push(game);
-    }
-  });
-
-  if (merged.length === (state.data.games || []).length) {
-    statusEl.textContent = 'No missing local games to recover';
-    return;
-  }
-
-  state.data.games = merged;
-  state.data.meta.updatedAt = new Date().toLocaleString();
-  applyGameTotals();
-  renderTables();
-  renderGames();
-  buildForms();
-  updateUpdatedAt();
-  renderChart();
-  const ok = await saveData(state.data, statusEl);
-  if (!ok) return;
-  try {
-    await refreshStateFromServer();
-    applyGameTotals();
-    renderTables();
-    renderGames();
-    buildForms();
-    updateUpdatedAt();
-    renderChart();
-    statusEl.textContent = 'Recovered local games';
-  } catch {
-    statusEl.textContent = 'Recovered locally; refresh later';
-  }
-}
 
 function updateUpdatedAt() {
   const stamp = state.data.meta.updatedAt || 'Just now';
@@ -988,61 +872,6 @@ if (cancelEditButton) {
   cancelEditButton.addEventListener('click', () => {
     gameStatus.textContent = '';
     resetGameForm();
-  });
-}
-
-if (restorePreviousButton) {
-  restorePreviousButton.addEventListener('click', async () => {
-    await restorePreviousSave(gameStatus);
-  });
-}
-
-if (restoreSeedButton) {
-  restoreSeedButton.addEventListener('click', async () => {
-    await restoreSeedData(gameStatus);
-  });
-}
-
-if (recoverLocalButton) {
-  recoverLocalButton.addEventListener('click', async () => {
-    await recoverLocalGames(gameStatus);
-  });
-}
-
-if (resetSeasonButton) {
-  resetSeasonButton.addEventListener('click', async () => {
-    if (state.loadedFromFallback) {
-      gameStatus.textContent = 'Refresh first before resetting';
-      return;
-    }
-    state.data.games = [];
-    state.data.current = blankCurrentStats();
-    state.data.meta.updatedAt = new Date().toLocaleString();
-    resetGameForm();
-    applyGameTotals();
-    renderTables();
-    renderGames();
-    buildForms();
-    updateUpdatedAt();
-    renderChart();
-    gameStatus.textContent = 'Resetting...';
-    try {
-      const res = await fetch('/api/data', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'clearSeason',
-          current: state.data.current,
-          meta: state.data.meta
-        })
-      });
-      if (!res.ok) throw new Error('Reset failed');
-      const payload = await res.json();
-      state.data = payload.data;
-      gameStatus.textContent = '2026 season reset';
-    } catch (err) {
-      gameStatus.textContent = 'Reset failed';
-    }
   });
 }
 
