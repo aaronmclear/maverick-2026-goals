@@ -77,9 +77,124 @@ const teamFilter = document.getElementById('teamFilter');
 const chartView = document.getElementById('chartView');
 const chartStat = document.getElementById('chartStat');
 const chartContainer = document.getElementById('chart');
+const installAppButton = document.getElementById('installApp');
+const shareAppButton = document.getElementById('shareApp');
+const copyLinkButton = document.getElementById('copyLink');
+const appActionsStatus = document.getElementById('appActionsStatus');
 
 const GOALS_PASSWORD = 'maverickbaseball';
 const LOCAL_BACKUP_KEY = 'maverick_2026_data_backup_v1';
+let deferredInstallPrompt = null;
+
+function getShareUrl() {
+  const url = new URL(window.location.href);
+  url.hash = '';
+  return url.toString();
+}
+
+function setAppActionStatus(message) {
+  if (!appActionsStatus) return;
+  appActionsStatus.textContent = message;
+}
+
+async function shareAppLink() {
+  const shareUrl = getShareUrl();
+  if (navigator.share) {
+    try {
+      await navigator.share({
+        title: 'Maverick 2026 Baseball Goals',
+        text: 'Track Maverick baseball progress and game stats live.',
+        url: shareUrl
+      });
+      setAppActionStatus('Shared');
+      return;
+    } catch {
+      // Fall through to clipboard.
+    }
+  }
+
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setAppActionStatus('Link copied');
+      return;
+    } catch {
+      // No-op.
+    }
+  }
+
+  setAppActionStatus(`Share this URL: ${shareUrl}`);
+}
+
+async function copyAppLink() {
+  const shareUrl = getShareUrl();
+  if (navigator.clipboard?.writeText) {
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setAppActionStatus('Link copied');
+      return;
+    } catch {
+      // No-op.
+    }
+  }
+  setAppActionStatus(`Copy this URL: ${shareUrl}`);
+}
+
+if (shareAppButton) {
+  shareAppButton.addEventListener('click', async () => {
+    await shareAppLink();
+  });
+}
+
+if (copyLinkButton) {
+  copyLinkButton.addEventListener('click', async () => {
+    await copyAppLink();
+  });
+}
+
+if (installAppButton) {
+  installAppButton.addEventListener('click', async () => {
+    if (!deferredInstallPrompt) {
+      setAppActionStatus('Use your browser menu to install this app');
+      return;
+    }
+    deferredInstallPrompt.prompt();
+    const choice = await deferredInstallPrompt.userChoice;
+    if (choice.outcome === 'accepted') {
+      setAppActionStatus('Installed');
+    } else {
+      setAppActionStatus('Install canceled');
+    }
+    deferredInstallPrompt = null;
+    installAppButton.classList.add('hidden');
+  });
+}
+
+window.addEventListener('beforeinstallprompt', event => {
+  event.preventDefault();
+  deferredInstallPrompt = event;
+  if (installAppButton) {
+    installAppButton.classList.remove('hidden');
+  }
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredInstallPrompt = null;
+  if (installAppButton) {
+    installAppButton.classList.add('hidden');
+  }
+  setAppActionStatus('App installed on this device');
+});
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', async () => {
+    try {
+      await navigator.serviceWorker.register('/sw.js');
+    } catch {
+      // Ignore service worker registration failures.
+    }
+  });
+}
 
 function blankCurrentStats() {
   return {
@@ -237,6 +352,8 @@ function calculateRates(totals) {
   const singles = batting.H - batting['2B'] - batting['3B'] - batting.HR;
   const totalBases = singles + batting['2B'] * 2 + batting['3B'] * 3 + batting.HR * 4;
   const innings = pitching.outs / 3;
+  const estimatedBF = pitching.outs + pitching.H_allowed + pitching.BB_allowed + pitching.HBP_allowed;
+  const bfForRates = pitching.BF > 0 ? pitching.BF : estimatedBF;
 
   const rates = {
     batting: {
@@ -250,8 +367,8 @@ function calculateRates(totals) {
       ERA: innings ? (pitching.ER * 9) / innings : null,
       WHIP: innings ? (pitching.H_allowed + pitching.BB_allowed) / innings : null,
       'K/BB': pitching.BB_allowed ? pitching.SO_pitched / pitching.BB_allowed : null,
-      'K/BF': pitching.BF ? pitching.SO_pitched / pitching.BF : null,
-      'BB/BF': pitching.BF ? pitching.BB_allowed / pitching.BF : null,
+      'K/BF': bfForRates ? pitching.SO_pitched / bfForRates : null,
+      'BB/BF': bfForRates ? pitching.BB_allowed / bfForRates : null,
       'Strike%': (pitching.balls + pitching.strikes) ? pitching.strikes / (pitching.balls + pitching.strikes) : null
     }
   };
