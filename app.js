@@ -71,6 +71,7 @@ const saveGameButton = document.getElementById('saveGameButton');
 const cancelEditButton = document.getElementById('cancelEditButton');
 const restorePreviousButton = document.getElementById('restorePreviousButton');
 const restoreSeedButton = document.getElementById('restoreSeedButton');
+const recoverLocalButton = document.getElementById('recoverLocalButton');
 const resetSeasonButton = document.getElementById('resetSeasonButton');
 const teamFilter = document.getElementById('teamFilter');
 const chartView = document.getElementById('chartView');
@@ -82,6 +83,7 @@ const copyLinkButton = document.getElementById('copyLink');
 const appActionsStatus = document.getElementById('appActionsStatus');
 
 const GOALS_PASSWORD = 'maverickbaseball';
+const LOCAL_BACKUP_KEY = 'maverick_2026_data_backup_v1';
 let deferredInstallPrompt = null;
 
 function getShareUrl() {
@@ -212,6 +214,53 @@ function blankCurrentStats() {
       'Strike%': null
     }
   };
+}
+
+function readLocalBackup() {
+  try {
+    const raw = localStorage.getItem(LOCAL_BACKUP_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeLocalBackup(data) {
+  try {
+    localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(data));
+  } catch {
+    // Ignore storage errors.
+  }
+}
+
+function gameIdentity(game) {
+  return [
+    game.date || '',
+    game.opponent || '',
+    game.team || '',
+    game.AB || 0,
+    game.H || 0,
+    game['2B'] || 0,
+    game['3B'] || 0,
+    game.HR || 0,
+    game.R || 0,
+    game.RBI || 0,
+    game.SB || 0,
+    game.BB || 0,
+    game.HBP || 0,
+    game.SF || 0,
+    game.SO || 0,
+    game.IP || 0,
+    game.BF || 0,
+    game.H_allowed || 0,
+    game.ER || 0,
+    game.HBP_allowed || 0,
+    game.BB_allowed || 0,
+    game.SO_pitched || 0
+  ].join('|');
 }
 
 function formatValue(value) {
@@ -631,6 +680,7 @@ async function saveData(data, statusEl) {
       body: JSON.stringify(data)
     });
     if (!res.ok) throw new Error('Save failed');
+    writeLocalBackup(data);
     statusEl.textContent = 'Saved';
     state.loadedFromFallback = false;
     return true;
@@ -707,6 +757,57 @@ async function restoreSeedData(statusEl) {
     statusEl.textContent = 'Seed data restored';
   } catch (err) {
     statusEl.textContent = 'Seed restore failed';
+  }
+}
+
+async function recoverLocalGames(statusEl) {
+  if (state.loadedFromFallback) {
+    statusEl.textContent = 'Refresh first before recovering';
+    return;
+  }
+  const backup = readLocalBackup();
+  const localGames = Array.isArray(backup?.games) ? backup.games : [];
+  if (!localGames.length) {
+    statusEl.textContent = 'No local backup games found';
+    return;
+  }
+
+  const seen = new Set((state.data.games || []).map(gameIdentity));
+  const merged = [...(state.data.games || [])];
+  localGames.forEach(game => {
+    const id = gameIdentity(game);
+    if (!seen.has(id)) {
+      seen.add(id);
+      merged.push(game);
+    }
+  });
+
+  if (merged.length === (state.data.games || []).length) {
+    statusEl.textContent = 'No missing local games to recover';
+    return;
+  }
+
+  state.data.games = merged;
+  state.data.meta.updatedAt = new Date().toLocaleString();
+  applyGameTotals();
+  renderTables();
+  renderGames();
+  buildForms();
+  updateUpdatedAt();
+  renderChart();
+  const ok = await saveData(state.data, statusEl);
+  if (!ok) return;
+  try {
+    await refreshStateFromServer();
+    applyGameTotals();
+    renderTables();
+    renderGames();
+    buildForms();
+    updateUpdatedAt();
+    renderChart();
+    statusEl.textContent = 'Recovered local games';
+  } catch {
+    statusEl.textContent = 'Recovered locally; refresh later';
   }
 }
 
@@ -891,6 +992,12 @@ if (restorePreviousButton) {
 if (restoreSeedButton) {
   restoreSeedButton.addEventListener('click', async () => {
     await restoreSeedData(gameStatus);
+  });
+}
+
+if (recoverLocalButton) {
+  recoverLocalButton.addEventListener('click', async () => {
+    await recoverLocalGames(gameStatus);
   });
 }
 
@@ -1129,6 +1236,9 @@ chartStat.addEventListener('change', () => {
 (async function init() {
   state.data = await loadData();
   if (!state.data.games) state.data.games = [];
+  if (!state.loadedFromFallback) {
+    writeLocalBackup(state.data);
+  }
   teamFilter.value = state.teamFilter;
   applyGameTotals();
   renderTables();
