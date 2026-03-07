@@ -893,6 +893,7 @@ gameForm.addEventListener('submit', async event => {
   } else {
     state.data.games.push(game);
   }
+  const submittedGameId = gameIdentity(game);
   state.data.meta.updatedAt = new Date().toLocaleString();
   applyGameTotals();
   renderTables();
@@ -920,6 +921,10 @@ gameForm.addEventListener('submit', async event => {
     buildForms();
     updateUpdatedAt();
     renderChart();
+    const persisted = (state.data.games || []).some(saved => gameIdentity(saved) === submittedGameId);
+    if (!persisted) {
+      gameStatus.textContent = 'Save failed: server did not persist game';
+    }
   } catch (err) {
     gameStatus.textContent = 'Saved, but refresh failed';
   }
