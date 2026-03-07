@@ -647,7 +647,7 @@ async function loadData() {
     window.location.hostname === '127.0.0.1' ||
     window.location.protocol === 'file:';
   try {
-    const res = await fetch('/api/data');
+    const res = await fetch('/api/data', { cache: 'no-store' });
     if (!res.ok) throw new Error('API unavailable');
     state.loadedFromFallback = false;
     return await res.json();
@@ -676,6 +676,7 @@ async function saveData(data, statusEl) {
   try {
     const res = await fetch('/api/data', {
       method: 'POST',
+      cache: 'no-store',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data)
     });
@@ -924,6 +925,8 @@ gameForm.addEventListener('submit', async event => {
     const persisted = (state.data.games || []).some(saved => gameIdentity(saved) === submittedGameId);
     if (!persisted) {
       gameStatus.textContent = 'Save failed: server did not persist game';
+    } else {
+      gameStatus.textContent = 'Saved and synced';
     }
   } catch (err) {
     gameStatus.textContent = 'Saved, but refresh failed';
