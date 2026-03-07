@@ -35,7 +35,9 @@ async function blobSet(value) {
   await put(BLOB_KEY, JSON.stringify(value), {
     access: 'public',
     contentType: 'application/json',
-    token: BLOB_TOKEN
+    token: BLOB_TOKEN,
+    addRandomSuffix: false,
+    allowOverwrite: true
   });
   return true;
 }
