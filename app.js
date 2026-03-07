@@ -48,8 +48,7 @@ const state = {
   data: null,
   teamFilter: 'All',
   editingGameIndex: null,
-  loadedFromFallback: false,
-  loadedFromLocalBackup: false
+  loadedFromFallback: false
 };
 
 const battingTableBody = document.querySelector('#battingTable tbody');
@@ -83,7 +82,6 @@ const copyLinkButton = document.getElementById('copyLink');
 const appActionsStatus = document.getElementById('appActionsStatus');
 
 const GOALS_PASSWORD = 'maverickbaseball';
-const LOCAL_BACKUP_KEY = 'maverick_2026_data_backup_v1';
 let deferredInstallPrompt = null;
 
 function getShareUrl() {
@@ -214,43 +212,6 @@ function blankCurrentStats() {
       'Strike%': null
     }
   };
-}
-
-function readLocalBackup() {
-  try {
-    const raw = localStorage.getItem(LOCAL_BACKUP_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') return null;
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-function writeLocalBackup(data) {
-  try {
-    localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(data));
-  } catch {
-    // Ignore storage errors.
-  }
-}
-
-function parseStamp(stamp) {
-  if (!stamp) return 0;
-  const t = Date.parse(stamp);
-  return Number.isFinite(t) ? t : 0;
-}
-
-function preferLocalBackup(serverData, localBackup) {
-  if (!localBackup) return serverData;
-  const serverGames = Array.isArray(serverData.games) ? serverData.games : [];
-  const localGames = Array.isArray(localBackup.games) ? localBackup.games : [];
-  if (!localGames.length) return serverData;
-  if (!serverGames.length) return localBackup;
-  const localStamp = parseStamp(localBackup?.meta?.updatedAt);
-  const serverStamp = parseStamp(serverData?.meta?.updatedAt);
-  return localStamp > serverStamp ? localBackup : serverData;
 }
 
 function formatValue(value) {
@@ -636,23 +597,13 @@ async function loadData() {
     window.location.hostname === 'localhost' ||
     window.location.hostname === '127.0.0.1' ||
     window.location.protocol === 'file:';
-  const localBackup = readLocalBackup();
   try {
     const res = await fetch('/api/data');
     if (!res.ok) throw new Error('API unavailable');
     state.loadedFromFallback = false;
-    const serverData = await res.json();
-    const merged = preferLocalBackup(serverData, localBackup);
-    state.loadedFromLocalBackup = merged === localBackup;
-    return merged;
+    return await res.json();
   } catch (err) {
-    if (localBackup) {
-      state.loadedFromFallback = true;
-      state.loadedFromLocalBackup = true;
-      return localBackup;
-    }
     state.loadedFromFallback = true;
-    state.loadedFromLocalBackup = false;
     if (isLocalDev) {
       const fallback = await fetch('data.json');
       return await fallback.json();
@@ -668,7 +619,10 @@ async function loadData() {
 }
 
 async function saveData(data, statusEl) {
-  writeLocalBackup(data);
+  if (state.loadedFromFallback) {
+    statusEl.textContent = 'Read-only mode: refresh and try again';
+    return false;
+  }
   statusEl.textContent = 'Saving...';
   try {
     const res = await fetch('/api/data', {
@@ -679,21 +633,17 @@ async function saveData(data, statusEl) {
     if (!res.ok) throw new Error('Save failed');
     statusEl.textContent = 'Saved';
     state.loadedFromFallback = false;
-    state.loadedFromLocalBackup = false;
     return true;
   } catch (err) {
-    state.loadedFromFallback = true;
-    state.loadedFromLocalBackup = true;
-    statusEl.textContent = 'Saved locally (server unavailable)';
-    return true;
+    statusEl.textContent = 'Save failed (server unavailable)';
+    return false;
   }
 }
 
 async function refreshStateFromServer() {
   const res = await fetch('/api/data', { cache: 'no-store' });
   if (!res.ok) throw new Error('Reload failed');
-  const payload = await res.json();
-  state.data = preferLocalBackup(payload, readLocalBackup());
+  state.data = await res.json();
   if (!state.data.games) state.data.games = [];
   if (!state.data.meta) state.data.meta = {};
 }
@@ -762,10 +712,6 @@ async function restoreSeedData(statusEl) {
 
 function updateUpdatedAt() {
   const stamp = state.data.meta.updatedAt || 'Just now';
-  if (state.loadedFromLocalBackup) {
-    updatedAtEl.textContent = `Updated: ${stamp} (local backup mode)`;
-    return;
-  }
   if (state.loadedFromFallback) {
     updatedAtEl.textContent = `Updated: ${stamp} (storage unavailable)`;
     return;
