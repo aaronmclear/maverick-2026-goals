@@ -1,9 +1,9 @@
-const CACHE_NAME = 'maverick-goals-v9';
+const CACHE_NAME = 'maverick-goals-v10';
 const APP_SHELL = [
   '/',
   '/index.html',
   '/styles.css',
-  '/app.js?v=9',
+  '/app.js?v=10',
   '/manifest.json',
   '/favicon.png',
   '/apple-touch-icon.png',

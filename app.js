@@ -221,10 +221,14 @@ function generateGameId() {
   return `game-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function normalizeGame(game) {
+function buildLegacyGameId(game, index) {
+  return `legacy-${index}-${gameIdentity(game)}`;
+}
+
+function normalizeGame(game, index = 0) {
   const normalized = { ...(game || {}) };
   if (!normalized.id) {
-    normalized.id = generateGameId();
+    normalized.id = buildLegacyGameId(normalized, index);
   }
   return normalized;
 }
@@ -235,7 +239,9 @@ function hydrateData(data) {
   if (!hydrated.baseline) hydrated.baseline = { batting: {}, pitching: {} };
   if (!hydrated.goals) hydrated.goals = { batting: {}, pitching: {} };
   if (!hydrated.current) hydrated.current = blankCurrentStats();
-  hydrated.games = Array.isArray(hydrated.games) ? hydrated.games.map(normalizeGame) : [];
+  hydrated.games = Array.isArray(hydrated.games)
+    ? hydrated.games.map((game, index) => normalizeGame(game, index))
+    : [];
   return hydrated;
 }
 
