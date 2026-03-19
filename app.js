@@ -529,6 +529,9 @@ function renderSeasonTotals() {
   const totalsByTeam = Object.fromEntries(
     Object.entries(teamGroups).map(([team, games]) => [team, calculateTotals(games)])
   );
+  const ratesByTeam = Object.fromEntries(
+    Object.entries(totalsByTeam).map(([team, totals]) => [team, calculateRates(totals)])
+  );
 
   const battingRows = [
     ['AB', 'AB'],
@@ -542,7 +545,12 @@ function renderSeasonTotals() {
     ['BB', 'BB'],
     ['HBP', 'HBP'],
     ['SF', 'SF'],
-    ['SO', 'SO']
+    ['SO', 'SO'],
+    ['AVG', 'AVG'],
+    ['OBP', 'OBP'],
+    ['SLG', 'SLG'],
+    ['OPS', 'OPS'],
+    ['K%', 'K%']
   ];
 
   const pitchingRows = [
@@ -555,17 +563,33 @@ function renderSeasonTotals() {
     ['SO', 'SO_pitched'],
     ['Pitches', 'pitches'],
     ['Balls', 'balls'],
-    ['Strikes', 'strikes']
+    ['Strikes', 'strikes'],
+    ['ERA', 'ERA'],
+    ['WHIP', 'WHIP'],
+    ['K/BB', 'K/BB'],
+    ['K/BF', 'K/BF'],
+    ['BB/BF', 'BB/BF'],
+    ['Strike%', 'Strike%']
   ];
 
   seasonBattingTableBody.innerHTML = '';
   battingRows.forEach(([label, key]) => {
     const row = document.createElement('tr');
+    const isRate = ['AVG', 'OBP', 'SLG', 'OPS', 'K%'].includes(key);
+    const combinedValue = isRate
+      ? formatValue(ratesByTeam.Combined.batting[key])
+      : formatHistoryWhole(totalsByTeam.Combined.batting[key]);
+    const elevenUValue = isRate
+      ? formatValue(ratesByTeam['11U'].batting[key])
+      : formatHistoryWhole(totalsByTeam['11U'].batting[key]);
+    const dodgersValue = isRate
+      ? formatValue(ratesByTeam.Dodgers.batting[key])
+      : formatHistoryWhole(totalsByTeam.Dodgers.batting[key]);
     row.innerHTML = `
       <td>${label}</td>
-      <td>${formatHistoryWhole(totalsByTeam.Combined.batting[key])}</td>
-      <td>${formatHistoryWhole(totalsByTeam['11U'].batting[key])}</td>
-      <td>${formatHistoryWhole(totalsByTeam.Dodgers.batting[key])}</td>
+      <td>${combinedValue}</td>
+      <td>${elevenUValue}</td>
+      <td>${dodgersValue}</td>
     `;
     seasonBattingTableBody.appendChild(row);
   });
@@ -573,14 +597,21 @@ function renderSeasonTotals() {
   seasonPitchingTableBody.innerHTML = '';
   pitchingRows.forEach(([label, key]) => {
     const row = document.createElement('tr');
+    const isRate = ['ERA', 'WHIP', 'K/BB', 'K/BF', 'BB/BF', 'Strike%'].includes(key);
     const combinedValue = key === 'outs'
       ? outsToDisplayIP(totalsByTeam.Combined.pitching.outs)
+      : isRate
+      ? formatValue(ratesByTeam.Combined.pitching[key])
       : formatHistoryWhole(totalsByTeam.Combined.pitching[key]);
     const elevenUValue = key === 'outs'
       ? outsToDisplayIP(totalsByTeam['11U'].pitching.outs)
+      : isRate
+      ? formatValue(ratesByTeam['11U'].pitching[key])
       : formatHistoryWhole(totalsByTeam['11U'].pitching[key]);
     const dodgersValue = key === 'outs'
       ? outsToDisplayIP(totalsByTeam.Dodgers.pitching.outs)
+      : isRate
+      ? formatValue(ratesByTeam.Dodgers.pitching[key])
       : formatHistoryWhole(totalsByTeam.Dodgers.pitching[key]);
     row.innerHTML = `
       <td>${label}</td>
