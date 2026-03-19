@@ -47,12 +47,14 @@ const gameFields = [
 const state = {
   data: null,
   teamFilter: 'All',
-  editingGameIndex: null,
+  editingGameId: null,
   loadedFromFallback: false
 };
 
 const battingTableBody = document.querySelector('#battingTable tbody');
 const pitchingTableBody = document.querySelector('#pitchingTable tbody');
+const seasonBattingTableBody = document.querySelector('#seasonBattingTable tbody');
+const seasonPitchingTableBody = document.querySelector('#seasonPitchingTable tbody');
 const goalsForm = document.getElementById('goalsForm');
 const updatedAtEl = document.getElementById('updatedAt');
 const goalsStatus = document.getElementById('goalsStatus');
@@ -212,6 +214,31 @@ function blankCurrentStats() {
   };
 }
 
+function generateGameId() {
+  if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+    return window.crypto.randomUUID();
+  }
+  return `game-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function normalizeGame(game) {
+  const normalized = { ...(game || {}) };
+  if (!normalized.id) {
+    normalized.id = generateGameId();
+  }
+  return normalized;
+}
+
+function hydrateData(data) {
+  const hydrated = data && typeof data === 'object' ? data : {};
+  if (!hydrated.meta) hydrated.meta = {};
+  if (!hydrated.baseline) hydrated.baseline = { batting: {}, pitching: {} };
+  if (!hydrated.goals) hydrated.goals = { batting: {}, pitching: {} };
+  if (!hydrated.current) hydrated.current = blankCurrentStats();
+  hydrated.games = Array.isArray(hydrated.games) ? hydrated.games.map(normalizeGame) : [];
+  return hydrated;
+}
+
 function readLocalBackup() {
   try {
     const raw = localStorage.getItem(LOCAL_BACKUP_KEY);
@@ -267,9 +294,12 @@ function formatValue(value) {
   return num.toFixed(3);
 }
 
-function statusFor(value, baselineValue, goalValue, higherIsBetter) {
+function statusFor(statKey, value, baselineValue, goalValue, higherIsBetter) {
   if ([value, baselineValue, goalValue].some(v => v === null || v === undefined || Number.isNaN(v))) {
     return 'gray';
+  }
+  if (statKey === 'BB/BF') {
+    return value <= goalValue ? 'green' : 'red';
   }
   if (higherIsBetter) {
     if (value >= goalValue) return 'green';
@@ -397,7 +427,7 @@ function getDisplayGames() {
   const filtered = getFilteredGames();
   const mapped = filtered.map(game => ({
     game,
-    originalIndex: state.data.games.indexOf(game)
+    gameId: game.id
   }));
   mapped.sort((a, b) => {
     const aTime = Date.parse(a.game.date || '');
@@ -407,7 +437,7 @@ function getDisplayGames() {
     if (aValid && bValid && aTime !== bTime) return bTime - aTime;
     if (aValid && !bValid) return -1;
     if (!aValid && bValid) return 1;
-    return b.originalIndex - a.originalIndex;
+    return state.data.games.indexOf(b.game) - state.data.games.indexOf(a.game);
   });
   return mapped;
 }
@@ -422,6 +452,14 @@ function formatHistoryIP(value) {
   const num = Number(value || 0);
   if (Number.isNaN(num)) return '0.0';
   return num.toFixed(1);
+}
+
+function outsToDisplayIP(outs) {
+  const totalOuts = Number(outs || 0);
+  if (Number.isNaN(totalOuts) || totalOuts <= 0) return '0.0';
+  const whole = Math.floor(totalOuts / 3);
+  const remainder = totalOuts % 3;
+  return `${whole}.${remainder}`;
 }
 
 function formatHistoryDate(value) {
@@ -454,7 +492,7 @@ function renderTable(section, tbody) {
     const value = current[stat.key];
     const base = baseline[stat.key];
     const goal = goals[stat.key];
-    const status = statusFor(value, base, goal, stat.higherIsBetter);
+    const status = statusFor(stat.key, value, base, goal, stat.higherIsBetter);
 
     const row = document.createElement('tr');
     row.innerHTML = `
@@ -471,6 +509,81 @@ function renderTable(section, tbody) {
 function renderTables() {
   renderTable('batting', battingTableBody);
   renderTable('pitching', pitchingTableBody);
+}
+
+function renderSeasonTotals() {
+  if (!seasonBattingTableBody || !seasonPitchingTableBody) return;
+
+  const teamGroups = {
+    Combined: state.data.games || [],
+    '11U': (state.data.games || []).filter(game => (game.team || '') === '11U'),
+    Dodgers: (state.data.games || []).filter(game => (game.team || '') === 'Dodgers')
+  };
+
+  const totalsByTeam = Object.fromEntries(
+    Object.entries(teamGroups).map(([team, games]) => [team, calculateTotals(games)])
+  );
+
+  const battingRows = [
+    ['AB', 'AB'],
+    ['H', 'H'],
+    ['2B', '2B'],
+    ['3B', '3B'],
+    ['HR', 'HR'],
+    ['R', 'R'],
+    ['RBI', 'RBI'],
+    ['SB', 'SB'],
+    ['BB', 'BB'],
+    ['HBP', 'HBP'],
+    ['SF', 'SF'],
+    ['SO', 'SO']
+  ];
+
+  const pitchingRows = [
+    ['IP', 'outs'],
+    ['BF', 'BF'],
+    ['H', 'H_allowed'],
+    ['ER', 'ER'],
+    ['HBP', 'HBP_allowed'],
+    ['BB', 'BB_allowed'],
+    ['SO', 'SO_pitched'],
+    ['Pitches', 'pitches'],
+    ['Balls', 'balls'],
+    ['Strikes', 'strikes']
+  ];
+
+  seasonBattingTableBody.innerHTML = '';
+  battingRows.forEach(([label, key]) => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td>${label}</td>
+      <td>${formatHistoryWhole(totalsByTeam.Combined.batting[key])}</td>
+      <td>${formatHistoryWhole(totalsByTeam['11U'].batting[key])}</td>
+      <td>${formatHistoryWhole(totalsByTeam.Dodgers.batting[key])}</td>
+    `;
+    seasonBattingTableBody.appendChild(row);
+  });
+
+  seasonPitchingTableBody.innerHTML = '';
+  pitchingRows.forEach(([label, key]) => {
+    const row = document.createElement('tr');
+    const combinedValue = key === 'outs'
+      ? outsToDisplayIP(totalsByTeam.Combined.pitching.outs)
+      : formatHistoryWhole(totalsByTeam.Combined.pitching[key]);
+    const elevenUValue = key === 'outs'
+      ? outsToDisplayIP(totalsByTeam['11U'].pitching.outs)
+      : formatHistoryWhole(totalsByTeam['11U'].pitching[key]);
+    const dodgersValue = key === 'outs'
+      ? outsToDisplayIP(totalsByTeam.Dodgers.pitching.outs)
+      : formatHistoryWhole(totalsByTeam.Dodgers.pitching[key]);
+    row.innerHTML = `
+      <td>${label}</td>
+      <td>${combinedValue}</td>
+      <td>${elevenUValue}</td>
+      <td>${dodgersValue}</td>
+    `;
+    seasonPitchingTableBody.appendChild(row);
+  });
 }
 
 function buildForm(section, formEl, source) {
@@ -575,7 +688,7 @@ function buildGameForm() {
 }
 
 function setGameFormMode() {
-  const isEditing = state.editingGameIndex !== null;
+  const isEditing = state.editingGameId !== null;
   if (saveGameButton) {
     saveGameButton.textContent = isEditing ? 'Save Game Changes' : 'Add Game';
   }
@@ -603,7 +716,7 @@ function populateGameForm(game) {
 
 function resetGameForm() {
   gameForm.reset();
-  state.editingGameIndex = null;
+  state.editingGameId = null;
   setGameFormMode();
 }
 
@@ -622,15 +735,15 @@ function renderGames() {
     return;
   }
 
-  displayGames.forEach(({ game, originalIndex }) => {
+  displayGames.forEach(({ game, gameId }) => {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td><strong>${formatHistoryDate(game.date)}</strong><br>${game.opponent || ''}<br>${game.team || ''}</td>
       <td><strong>Batting</strong><br>AB ${formatHistoryWhole(game.AB)} · H ${formatHistoryWhole(game.H)} · 2B ${formatHistoryWhole(game['2B'])} · 3B ${formatHistoryWhole(game['3B'])} · HR ${formatHistoryWhole(game.HR)} · R ${formatHistoryWhole(game.R)} · RBI ${formatHistoryWhole(game.RBI)} · SB ${formatHistoryWhole(game.SB)} · BB ${formatHistoryWhole(game.BB)} · HBP ${formatHistoryWhole(game.HBP)} · SF ${formatHistoryWhole(game.SF)} · SO ${formatHistoryWhole(game.SO)}</td>
       <td><strong>Pitching</strong><br>IP ${formatHistoryIP(game.IP)} · BF ${formatHistoryWhole(game.BF)} · H ${formatHistoryWhole(game.H_allowed)} · ER ${formatHistoryWhole(game.ER)} · HBP ${formatHistoryWhole(game.HBP_allowed)} · BB ${formatHistoryWhole(game.BB_allowed)} · SO ${formatHistoryWhole(game.SO_pitched)} · P ${formatHistoryWhole(game.pitches || ((game.balls || 0) + (game.strikes || 0)))} · B ${formatHistoryWhole(game.balls)} · S ${formatHistoryWhole(game.strikes)}</td>
       <td>
-        <button class="btn btn--ghost" data-action="edit" data-index="${originalIndex}">Edit</button>
-        <button class="btn btn--ghost" data-action="remove" data-index="${originalIndex}">Remove</button>
+        <button class="btn btn--ghost" data-action="edit" data-game-id="${gameId}">Edit</button>
+        <button class="btn btn--ghost" data-action="remove" data-game-id="${gameId}">Remove</button>
       </td>
     `;
     gamesTableBody.appendChild(row);
@@ -646,20 +759,20 @@ async function loadData() {
     const res = await fetch('/api/data', { cache: 'no-store' });
     if (!res.ok) throw new Error('API unavailable');
     state.loadedFromFallback = false;
-    return await res.json();
+    return hydrateData(await res.json());
   } catch (err) {
     state.loadedFromFallback = true;
     if (isLocalDev) {
       const fallback = await fetch('data.json');
-      return await fallback.json();
+      return hydrateData(await fallback.json());
     }
-    return {
+    return hydrateData({
       meta: { title: 'Maverick 2026 Baseball Goals', updatedAt: 'Server unavailable' },
       baseline: { batting: {}, pitching: {} },
       goals: { batting: {}, pitching: {} },
       current: blankCurrentStats(),
       games: []
-    };
+    });
   }
 }
 
@@ -690,9 +803,25 @@ async function saveData(data, statusEl) {
 async function refreshStateFromServer() {
   const res = await fetch('/api/data', { cache: 'no-store' });
   if (!res.ok) throw new Error('Reload failed');
-  state.data = await res.json();
-  if (!state.data.games) state.data.games = [];
-  if (!state.data.meta) state.data.meta = {};
+  state.data = hydrateData(await res.json());
+}
+
+async function syncLatestGames(statusEl) {
+  if (state.loadedFromFallback) {
+    if (statusEl) statusEl.textContent = 'Read-only mode: refresh and try again';
+    return false;
+  }
+  try {
+    await refreshStateFromServer();
+    return true;
+  } catch (err) {
+    if (statusEl) statusEl.textContent = 'Could not load latest saved games';
+    return false;
+  }
+}
+
+function findGameIndexById(gameId) {
+  return state.data.games.findIndex(game => game.id === gameId);
 }
 
 
@@ -726,6 +855,7 @@ goalsForm.addEventListener('submit', async event => {
   const before = JSON.parse(JSON.stringify(state.data));
   state.data.meta.updatedAt = new Date().toLocaleString();
   renderTables();
+  renderSeasonTotals();
   updateUpdatedAt();
   const ok = await saveData(state.data, goalsStatus);
   if (!ok) {
@@ -739,6 +869,7 @@ goalsForm.addEventListener('submit', async event => {
     applyGameTotals();
     renderTables();
     renderGames();
+    renderSeasonTotals();
     buildForms();
     updateUpdatedAt();
     renderChart();
@@ -761,6 +892,8 @@ if (unlockGoals) {
 
 gameForm.addEventListener('submit', async event => {
   event.preventDefault();
+  const synced = await syncLatestGames(gameStatus);
+  if (!synced) return;
   const formData = new FormData(gameForm);
   const game = {};
   gameFields.forEach(field => {
@@ -772,9 +905,11 @@ gameForm.addEventListener('submit', async event => {
       game[field.key] = value || '';
     }
   });
+  game.id = state.editingGameId || generateGameId();
   const before = JSON.parse(JSON.stringify(state.data));
-  if (state.editingGameIndex !== null && state.data.games[state.editingGameIndex]) {
-    state.data.games[state.editingGameIndex] = game;
+  const existingIndex = state.editingGameId ? findGameIndexById(state.editingGameId) : -1;
+  if (existingIndex !== -1) {
+    state.data.games[existingIndex] = game;
   } else {
     state.data.games.push(game);
   }
@@ -783,6 +918,7 @@ gameForm.addEventListener('submit', async event => {
   applyGameTotals();
   renderTables();
   renderGames();
+  renderSeasonTotals();
   buildForms();
   updateUpdatedAt();
   resetGameForm();
@@ -793,6 +929,7 @@ gameForm.addEventListener('submit', async event => {
     applyGameTotals();
     renderTables();
     renderGames();
+    renderSeasonTotals();
     buildForms();
     updateUpdatedAt();
     renderChart();
@@ -803,6 +940,7 @@ gameForm.addEventListener('submit', async event => {
     applyGameTotals();
     renderTables();
     renderGames();
+    renderSeasonTotals();
     buildForms();
     updateUpdatedAt();
     renderChart();
@@ -820,27 +958,36 @@ gameForm.addEventListener('submit', async event => {
 gamesTableBody.addEventListener('click', async event => {
   if (event.target.tagName !== 'BUTTON') return;
   const action = event.target.dataset.action || 'remove';
-  const originalIndex = Number(event.target.dataset.index);
-  if (Number.isNaN(originalIndex) || originalIndex < 0) return;
-  if (!state.data.games[originalIndex]) return;
+  const gameId = event.target.dataset.gameId;
+  if (!gameId) return;
 
   if (action === 'edit') {
-    state.editingGameIndex = originalIndex;
+    const originalIndex = findGameIndexById(gameId);
+    if (originalIndex === -1) return;
+    state.editingGameId = gameId;
     populateGameForm(state.data.games[originalIndex]);
     setGameFormMode();
     gameStatus.textContent = 'Editing saved game';
     return;
   }
 
+  const synced = await syncLatestGames(gameStatus);
+  if (!synced) return;
+  const originalIndex = findGameIndexById(gameId);
+  if (originalIndex === -1) {
+    gameStatus.textContent = 'Game no longer exists';
+    return;
+  }
   const before = JSON.parse(JSON.stringify(state.data));
   state.data.games.splice(originalIndex, 1);
-  if (state.editingGameIndex === originalIndex) {
+  if (state.editingGameId === gameId) {
     resetGameForm();
   }
   state.data.meta.updatedAt = new Date().toLocaleString();
   applyGameTotals();
   renderTables();
   renderGames();
+  renderSeasonTotals();
   buildForms();
   updateUpdatedAt();
   renderChart();
@@ -850,6 +997,7 @@ gamesTableBody.addEventListener('click', async event => {
     applyGameTotals();
     renderTables();
     renderGames();
+    renderSeasonTotals();
     buildForms();
     updateUpdatedAt();
     renderChart();
@@ -860,6 +1008,7 @@ gamesTableBody.addEventListener('click', async event => {
     applyGameTotals();
     renderTables();
     renderGames();
+    renderSeasonTotals();
     buildForms();
     updateUpdatedAt();
     renderChart();
@@ -880,6 +1029,7 @@ teamFilter.addEventListener('change', () => {
   applyGameTotals();
   renderTables();
   renderGames();
+  renderSeasonTotals();
   buildForms();
   renderChart();
 });
@@ -903,6 +1053,8 @@ uploadGamesCsv.addEventListener('click', async () => {
     gamesCsvStatus.textContent = 'Pick a CSV file first.';
     return;
   }
+  const synced = await syncLatestGames(gamesCsvStatus);
+  if (!synced) return;
   const file = gamesCsv.files[0];
   const text = await file.text();
   const rows = parseCsv(text);
@@ -922,6 +1074,7 @@ uploadGamesCsv.addEventListener('click', async () => {
         game[field.key] = raw;
       }
     });
+    game.id = generateGameId();
     state.data.games.push(game);
   });
   state.data.meta.updatedAt = new Date().toLocaleString();
@@ -937,6 +1090,7 @@ uploadGamesCsv.addEventListener('click', async () => {
     applyGameTotals();
     renderTables();
     renderGames();
+    renderSeasonTotals();
     buildForms();
     updateUpdatedAt();
     renderChart();
@@ -945,9 +1099,10 @@ uploadGamesCsv.addEventListener('click', async () => {
   try {
     await refreshStateFromServer();
     applyGameTotals();
-    renderTables();
-    renderGames();
-    buildForms();
+  renderTables();
+  renderGames();
+  renderSeasonTotals();
+  buildForms();
     updateUpdatedAt();
     renderChart();
   } catch (err) {
@@ -1071,8 +1226,7 @@ chartStat.addEventListener('change', () => {
 });
 
 (async function init() {
-  state.data = await loadData();
-  if (!state.data.games) state.data.games = [];
+  state.data = hydrateData(await loadData());
   if (!state.loadedFromFallback) {
     writeLocalBackup(state.data);
   }
@@ -1083,6 +1237,7 @@ chartStat.addEventListener('change', () => {
   buildGameForm();
   setGameFormMode();
   renderGames();
+  renderSeasonTotals();
   updateUpdatedAt();
   buildChartStatOptions();
   renderChart();
